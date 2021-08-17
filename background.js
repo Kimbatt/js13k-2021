@@ -1,6 +1,139 @@
 
+class Vec3
+{
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     */
+    constructor(x, y, z)
+    {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+
+    normalize()
+    {
+        let len = Math.hypot(this.x, this.y, this.z);
+        this.x /= len;
+        this.y /= len;
+        this.z /= len;
+
+        return this;
+    }
+}
+
+class Quat
+{
+    /**
+     * @param {Vec3} axis
+     * @param {number} angle
+     */
+    constructor(axis, angle)
+    {
+        let halfAngle = angle / 2, s = Math.sin(halfAngle);
+
+        this.x = axis.x * s;
+        this.y = axis.y * s;
+        this.z = axis.z * s;
+        this.w = Math.cos(halfAngle);
+    }
+
+    /**
+     * @param {Quat} other
+     * @returns {Quat}
+     */
+    multiply(a, b)
+    {
+        const { x: qax, y: qay, z: qaz, w: qaw } = a;
+        const { x: qbx, y: qby, z: qbz, w: qbw } = b;
+
+        this.x = qax * qbw + qaw * qbx + qay * qbz - qaz * qby;
+        this.y = qay * qbw + qaw * qby + qaz * qbx - qax * qbz;
+        this.z = qaz * qbw + qaw * qbz + qax * qby - qay * qbx;
+        this.w = qaw * qbw - qax * qbx - qay * qby - qaz * qbz;
+
+        return this;
+    }
+
+    /**
+     * @param {Vec3} axis
+     * @param {number} angle
+     */
+    rotateWithAngleAxisLocal(axis, angle)
+    {
+        return this.multiply(new Quat(axis, angle), this);
+    }
+
+    toMatrix3()
+    {
+        let { x, y, z, w } = this;
+        const x2 = x + x,    y2 = y + y, z2 = z + z;
+        const xx = x * x2, xy = x * y2, xz = x * z2;
+        const yy = y * y2, yz = y * z2, zz = z * z2;
+        const wx = w * x2, wy = w * y2, wz = w * z2;
+
+        return [
+            (1 - (yy + zz)),
+            (xy + wz),
+            (xz - wy),
+
+            (xy - wz),
+            (1 - (xx + zz)),
+            (yz + wx),
+
+            (xz + wy),
+            (yz - wx),
+            (1 - (xx + yy))
+        ];
+    }
+}
+
+
+let rotation = new Quat(new Vec3(0, 1, 0), 0);
+
 /**
- *
+ * @type { {[key: string]: boolean} }
+ */
+let keymap = {};
+
+window.addEventListener("keydown", ev =>
+{
+    if (!ev.repeat)
+    {
+        keymap[ev.key] = true;
+    }
+});
+
+window.addEventListener("keyup", ev =>
+{
+    if (!ev.repeat)
+    {
+        keymap[ev.key] = false;
+    }
+});
+
+function UpdateRotation()
+{
+    const rotationMultiplier = 0.01;
+    let x = 0;
+    let y = 0;
+    let z = 0;
+
+    if (keymap["a"]) x += 1;
+    if (keymap["d"]) x -= 1;
+    if (keymap["w"]) y += 1;
+    if (keymap["s"]) y -= 1;
+    if (keymap["q"]) z -= 1;
+    if (keymap["e"]) z += 1;
+
+    rotation.rotateWithAngleAxisLocal(new Vec3(0, 1, 0), x * rotationMultiplier);
+    rotation.rotateWithAngleAxisLocal(new Vec3(1, 0, 0), y * rotationMultiplier);
+    rotation.rotateWithAngleAxisLocal(new Vec3(0, 0, 1), z * rotationMultiplier * 3);
+}
+
+/**
  * @param {string} shader
  * @returns {void}
  */
@@ -46,8 +179,8 @@ void main()
     `;
 
     const canvas = document.createElement("canvas");
-    canvas.width = 1920;
-    canvas.height = 1080;
+    canvas.width = 1920/2;
+    canvas.height = 1080/2;
     document.body.appendChild(canvas);
     const ctx = canvas.getContext("webgl");
     ctx.viewport(0, 0, canvas.width, canvas.height);
@@ -135,9 +268,6 @@ void main()
     ctx.bindBuffer(ctx.ARRAY_BUFFER, vertexBuffer);
     ctx.bufferData(ctx.ARRAY_BUFFER, vertexPositions, ctx.STATIC_DRAW);
 
-    let dir = new Vec3(0, 1, 0);
-    let angle = 0.0;
-
     function Draw()
     {
         const time = performance.now() * 0.001;
@@ -146,8 +276,10 @@ void main()
         ctx.uniform1f(timeLocation, time);
 
 
-        ctx.uniformMatrix3fv(rotmatLocation, false, getRotationMatrix(time * 0.05, dir));
+        UpdateRotation();
 
+
+        ctx.uniformMatrix3fv(rotmatLocation, false, rotation.toMatrix3());
 
         // render
         // ctx.clear(ctx.COLOR_BUFFER_BIT);
@@ -161,31 +293,6 @@ void main()
     }
 
     Draw();
-}
-
-class Vec3
-{
-    /**
-     * @param {number} x
-     * @param {number} y
-     * @param {number} z
-     */
-    constructor(x, y, z)
-    {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-    }
-
-    normalize()
-    {
-        let len = Math.hypot(this.x, this.y, this.z);
-        this.x /= len;
-        this.y /= len;
-        this.z /= len;
-
-        return this;
-    }
 }
 
 /**
@@ -272,7 +379,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     dir = normalize(dir);
 
 
-    vec3 from = vec3(0.29 + noise(uTime * 0.002) * 0.01, 0.61 + noise(uTime * 0.002 + 3.45) * 0.01, 0.09);
+    vec3 from = vec3(0.29 + noise(uTime * 0.002) * 0.01, 0.14 + noise(uTime * 0.002 + 3.45) * 0.01, 0.09);
 
 
     dir *= rotmat;
@@ -291,7 +398,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         {
             p = abs(p) / dot(p, p) - formuparam; // the magic formula
             float D = abs(length(p) - pa); // absolute sum of average change
-            a += mix(D, min(20.0, D), clamp(float(i - 9), 0.0, 1.0));
+            a += mix(D, min(20.0, D), clamp(float(i - 8), 0.0, 1.0));
             pa=length(p);
         }
 
@@ -300,11 +407,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         v += fade;
 
         v += vec3(s, s * s, s * s * s * s) * a * brightness * fade; // coloring based on distance
-		fade *= distfading + noise(uTime * 0.01) * 0.1; // distance fading
+        fade *= distfading + noise(uTime * 0.01) * 0.1; // distance fading
         s += stepsize;
     }
 
-    v = mix(vec3(length(v)), v, saturation - noise(uTime * 0.03) * 0.5); //color adjust
+    v = mix(vec3(length(v)), v, saturation - noise(uTime * 0.03) * 0.2); //color adjust
     fragColor = vec4(v * 0.01, 1.0);
     fragColor.r *= 0.5 + noise(uTime * 0.07 + 1.23) * 0.3;
     // fragColor.g *= 0.6;
