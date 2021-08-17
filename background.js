@@ -14,32 +14,6 @@ uniform vec4 uScreenSize;
 uniform float uTime;
 
 varying vec4 vPixelCoord;
-varying mat3 rotmat; // TODO: uniform
-
-
-mat3 getRotationMatrix(float angle, vec3 v)
-{
-    float a = angle;
-    float c = cos(a);
-    float s = sin(a);
-    mat3 Result;
-
-    vec3 axis = normalize(v);
-
-    Result[0][0] = c + (1.0 - c)      * axis.x     * axis.x;
-    Result[0][1] = (1.0 - c) * axis.x * axis.y + s * axis.z;
-    Result[0][2] = (1.0 - c) * axis.x * axis.z - s * axis.y;
-
-    Result[1][0] = (1.0 - c) * axis.y * axis.x - s * axis.z;
-    Result[1][1] = c + (1.0 - c) * axis.y * axis.y;
-    Result[1][2] = (1.0 - c) * axis.y * axis.z + s * axis.x;
-
-    Result[2][0] = (1.0 - c) * axis.z * axis.x + s * axis.y;
-    Result[2][1] = (1.0 - c) * axis.z * axis.y - s * axis.x;
-    Result[2][2] = c + (1.0 - c) * axis.z * axis.z;
-
-    return Result;
-}
 
 void main()
 {
@@ -47,8 +21,6 @@ void main()
     vec2 screenPosition = normalizedPosition * uScreenSize.xy;
     vPixelCoord = vec4(normalizedPosition, screenPosition);
     gl_Position = vec4(aVertexPosition, 0.0, 1.0);
-
-    rotmat = getRotationMatrix(uTime * 0.05, vec3(cos(uTime * 0.1), cos(uTime * 0.15), cos(uTime * 0.2)));
 }
     `;
 
@@ -77,7 +49,7 @@ void main()
     canvas.width = 1920;
     canvas.height = 1080;
     document.body.appendChild(canvas);
-    const ctx = canvas.getContext("webgl2");
+    const ctx = canvas.getContext("webgl");
     ctx.viewport(0, 0, canvas.width, canvas.height);
 
     const vertShaderObj = ctx.createShader(ctx.VERTEX_SHADER);
@@ -154,6 +126,8 @@ void main()
     const screenSizeLocation = ctx.getUniformLocation(program, "uScreenSize");
     const aspectLocation = ctx.getUniformLocation(program, "uAspect");
 
+    const rotmatLocation = ctx.getUniformLocation(program, "rotmat");
+
     ctx.uniform4f(screenSizeLocation, canvas.width, canvas.height, 1 / canvas.width, 1 / canvas.height);
     ctx.uniform2f(aspectLocation, canvas.width / canvas.height, canvas.height / canvas.width);
 
@@ -161,13 +135,22 @@ void main()
     ctx.bindBuffer(ctx.ARRAY_BUFFER, vertexBuffer);
     ctx.bufferData(ctx.ARRAY_BUFFER, vertexPositions, ctx.STATIC_DRAW);
 
+    let dir = new Vec3(0, 1, 0);
+    let angle = 0.0;
+
     function Draw()
     {
+        const time = performance.now() * 0.001;
+
         // time
-        ctx.uniform1f(timeLocation, performance.now() * 0.001);
+        ctx.uniform1f(timeLocation, time);
+
+
+        ctx.uniformMatrix3fv(rotmatLocation, false, getRotationMatrix(time * 0.05, dir));
+
 
         // render
-        ctx.clear(ctx.COLOR_BUFFER_BIT);
+        // ctx.clear(ctx.COLOR_BUFFER_BIT);
         ctx.enableVertexAttribArray(vertexLocation);
         ctx.bindBuffer(ctx.ARRAY_BUFFER, vertexBuffer);
         ctx.vertexAttribPointer(vertexLocation, 2, ctx.FLOAT, false, 0, 0);
@@ -180,14 +163,75 @@ void main()
     Draw();
 }
 
+class Vec3
+{
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     */
+    constructor(x, y, z)
+    {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+
+    normalize()
+    {
+        let len = Math.hypot(this.x, this.y, this.z);
+        this.x /= len;
+        this.y /= len;
+        this.z /= len;
+
+        return this;
+    }
+}
+
+/**
+ * @param {number} angle
+ * @param {Vec3} axis
+ * @returns {Array<number>}
+ */
+function getRotationMatrix(angle, axis)
+{
+    let a = angle;
+    let m = Math;
+    let c = m.cos(a);
+    let s = m.sin(a);
+
+    axis.normalize();
+    let c1 = 1 - c,
+        { x, y, z } = axis,
+        cx = c1 * x,
+        cy = c1 * y,
+        cz = c1 * z,
+        sx = s * x,
+        sy = s * y,
+        sz = s * z;
+
+    return [
+        c + cx * x,
+        cx * y + sz,
+        cx * z - sy,
+
+        cy * x - sz,
+        c + cy * y,
+        cy * z + sx,
+
+        cz * x + sy,
+        cz * y - sx,
+        c + cz * z
+    ];
+}
+
 CreateWebglCanvas(`
 // https://www.shadertoy.com/view/4dl3Ws
 
-varying mat3 rotmat;
-
+uniform mat3 rotmat;
 
 #define iterations 15
-#define formuparam 0.5
+#define formuparam 0.7
 
 #define volsteps 15
 #define stepsize 0.12
@@ -228,7 +272,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     dir = normalize(dir);
 
 
-    vec3 from = vec3(0.23 + noise(uTime * 0.01) * 0.01, 0.56 + noise(uTime * 0.01 + 3.45) * 0.01, 0.09);
+    vec3 from = vec3(0.29 + noise(uTime * 0.002) * 0.01, 0.61 + noise(uTime * 0.002 + 3.45) * 0.01, 0.09);
 
 
     dir *= rotmat;
@@ -246,22 +290,23 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         for (int i = 0; i < iterations; ++i)
         {
             p = abs(p) / dot(p, p) - formuparam; // the magic formula
-            a += abs(length(p) - pa); // absolute sum of average change
-            pa = pow(dot(p, p), 0.3 + noise(uTime * 0.1) * 0.3);
+            float D = abs(length(p) - pa); // absolute sum of average change
+            a += mix(D, min(20.0, D), clamp(float(i - 9), 0.0, 1.0));
+            pa=length(p);
         }
 
-        a *= a * a; // add contrast
+        a = pow(a, 3.2 + noise(uTime * 0.01) * 0.1); // add contrast
 
         v += fade;
 
         v += vec3(s, s * s, s * s * s * s) * a * brightness * fade; // coloring based on distance
-		fade *= distfading; // distance fading
+		fade *= distfading + noise(uTime * 0.01) * 0.1; // distance fading
         s += stepsize;
     }
 
     v = mix(vec3(length(v)), v, saturation - noise(uTime * 0.03) * 0.5); //color adjust
     fragColor = vec4(v * 0.01, 1.0);
-    fragColor.r *= 0.7 + noise(uTime * 0.07 + 1.23) * 0.3;
+    fragColor.r *= 0.5 + noise(uTime * 0.07 + 1.23) * 0.3;
     // fragColor.g *= 0.6;
 }
 `);
