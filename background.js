@@ -399,7 +399,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             p = abs(p) / dot(p, p) - formuparam; // the magic formula
             float D = abs(length(p) - pa); // absolute sum of average change
             a += mix(D, min(20.0, D), clamp(float(i - 8), 0.0, 1.0));
-            pa=length(p);
+            pa = pow(dot(p, p), 0.1);
         }
 
         a = pow(a, 3.2 + noise(uTime * 0.01) * 0.1); // add contrast
@@ -413,7 +413,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     v = mix(vec3(length(v)), v, saturation - noise(uTime * 0.03) * 0.2); //color adjust
     fragColor = vec4(v * 0.01, 1.0);
-    fragColor.r *= 0.5 + noise(uTime * 0.07 + 1.23) * 0.3;
+    fragColor.r *= 0.5 + noise(uTime * 0.02 + 1.23) * 0.3;
     // fragColor.g *= 0.6;
 }
 `);
