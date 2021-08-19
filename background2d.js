@@ -23,7 +23,7 @@ let posX = 0;
 let posY = 0;
 function UpdatePosition()
 {
-    const multiplier = 0.01;
+    const multiplier = 0.003;
     let x = 0;
     let y = 0;
 
@@ -251,9 +251,32 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 uv = fragCoord - 0.5;
     uv.y *= uAspect.y;
 
-    vec3 dir = vec3(uv * zoom, 1.0);
 
     vec3 from = vec3(offset.x, offset.y, -11.11);
+
+    const float blackHoleEffectRadius = 0.0002;
+    const float blackHoleRadius = 0.04;
+    const float blackHoleEdgeSharpness = 200.0;
+    const float blackHolePower = 2.0;
+    const vec3 blackHoleColor = vec3(1.0);
+
+    const int numBlackHoles = 2;
+    vec2 blackHoles[numBlackHoles];
+    blackHoles[0] = vec2(0.0, 0.0);
+    blackHoles[1] = vec2(cos(uTime) * 0.1, sin(uTime) * 0.1);
+
+    float light = 1.0;
+    vec2 originalUv = uv;
+    for (int i = 0; i < numBlackHoles; ++i)
+    {
+        vec2 pos = blackHoles[i] - offset;
+        float currentDist = distance(pos, originalUv);
+        vec2 warp = normalize(pos - originalUv) * pow(currentDist, -blackHolePower) * blackHoleEffectRadius;
+        uv += warp;
+        light *= clamp((currentDist - blackHoleRadius) * blackHoleEdgeSharpness, 0.0, 1.0);
+    }
+
+    vec3 dir = vec3(uv * zoom, 1.0);
 
     float a1 = 1.0;
     float a2 = 2.5;
@@ -302,6 +325,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 rgb = pow(v * 0.01 * sqrt(s), vec3(1.5)) * 1.5;
     rgb.r *= 0.4 + noise(uTime * 0.02 + 1.23) * 0.3;
     rgb = clamp(rgb, vec3(0.0), vec3(1.0)) * 0.8;
+
+    rgb = mix(blackHoleColor, rgb, light);
+
     fragColor = vec4(rgb, 1.0);
     // fragColor.g *= 0.6;
 }
