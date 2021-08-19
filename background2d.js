@@ -23,7 +23,7 @@ let posX = 0;
 let posY = 0;
 function UpdatePosition()
 {
-    const multiplier = 0.0002;
+    const multiplier = 0.01;
     let x = 0;
     let y = 0;
 
@@ -207,12 +207,12 @@ void main()
 }
 
 CreateWebglCanvas(`
-// https://www.shadertoy.com/view/4dl3Ws
+// https://www.shadertoy.com/view/XlfGRj
 
 uniform vec2 offset;
 
 #define iterations 15
-#define formuparam 0.53
+#define formuparam 0.56
 
 #define volsteps 15
 #define stepsize 0.25
@@ -221,9 +221,9 @@ uniform vec2 offset;
 #define tile   0.850
 #define speed  0.010
 
-#define brightness 0.002
-#define darkmatter 0.200
-#define distfading 0.7
+#define brightness 0.0008
+#define darkmatter 0.000
+#define distfading 0.5
 #define saturation 1.0
 
 
@@ -255,7 +255,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec3 from = vec3(offset.x, offset.y, -11.11);
 
-    float a1 = 2.0;
+    float a1 = 1.0;
     float a2 = 2.5;
     mat2 rot1=mat2(cos(a1),sin(a1),-sin(a1),cos(a1));
     mat2 rot2=mat2(cos(a2),sin(a2),-sin(a2),cos(a2));
@@ -265,43 +265,44 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     from.xy*=rot2;
 
     // volumetric rendering
-    float s = 0.6;
-    float fade = 0.5;
+    float s = 0.5;
+    float fade = 0.9;
     vec3 v = vec3(-1.0);
     for (int r = 0; r < volsteps; ++r)
     {
         vec3 p = from + s * dir * 0.5;
         p = abs(vec3(tile) - mod(p, vec3(tile * 2.0))); // tiling fold
-        float pa = 0.0;
         float a = 0.0;
+
+        vec3 sp = p;
 
         for (int i = 0; i < iterations; ++i)
         {
             p = abs(p) / dot(p, p) - formuparam; // the magic formula
-#if 1
-            float D = abs(length(p)-pa); // absolute sum of average change
-            float fade2 = 1.0 / max(1.0, float(i - 5));
-            a += mix(min(10.0, D), D, fade2);
-#else
-            a += abs(length(p) - pa);
-            pa = length(p);
-#endif
+            float D = length(p); // absolute sum of average change
+            float fade2 = 5.0 / (float(i) * 2.0 + 20.0);
+            a += mix(min(15.0, D), D, fade2);
         }
-        float dm = max(0.0, darkmatter - a * a * 0.001); //dark matter
-        fade *= (1.0 - clamp(float(r - 6), 0.0, 1.0)) * (1.0 - dm); // dark matter, don't render near
+        // float dm = max(0.0, darkmatter - a * a * 0.001); //dark matter
+        // fade *= (1.0 - clamp(float(r - 8), 0.0, 1.0)) * (1.0 - dm); // dark matter, don't render near
+
+        fade *= clamp(5.0 / float(r + 1), 0.0, 1.0);
 
         a = pow(a, 3.2 + noise(uTime * 0.01) * 0.1); // add contrast
 
         v += fade;
+        v -= 0.2;
 
-        v += vec3(s, s * s, s * s * s * s) * a * brightness * fade; // coloring based on distance
-        fade *= distfading + noise(uTime * 0.01) * 0.1; // distance fading
+        v += vec3(s * s * s * s, s * s, s) * a * brightness * fade; // coloring based on distance
+        fade *= distfading - noise(uTime * 0.01) * 0.1; // distance fading
         s += stepsize;
     }
 
-    v = mix(vec3(length(v)), v, saturation - noise(uTime * 0.03) * 0.2); //color adjust
-    fragColor = vec4(v * 0.01, 1.0);
-    // fragColor.r *= 0.5 + noise(uTime * 0.02 + 1.23) * 0.3;
+    //v = mix(vec3(length(v)), v, saturation - noise(uTime * 0.03) * 0.2); //color adjust
+    vec3 rgb = pow(v * 0.01 * sqrt(s), vec3(1.5)) * 1.5;
+    rgb.r *= 0.4 + noise(uTime * 0.02 + 1.23) * 0.3;
+    rgb = clamp(rgb, vec3(0.0), vec3(1.0)) * 0.8;
+    fragColor = vec4(rgb, 1.0);
     // fragColor.g *= 0.6;
 }
 `);
