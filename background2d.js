@@ -212,10 +212,10 @@ CreateWebglCanvas(`
 uniform vec2 offset;
 
 #define iterations 15
-#define formuparam 0.45
+#define formuparam 0.53
 
 #define volsteps 15
-#define stepsize 0.12
+#define stepsize 0.25
 
 #define zoom   5.000
 #define tile   0.850
@@ -257,31 +257,37 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     float a1 = 2.0;
     float a2 = 2.5;
-	mat2 rot1=mat2(cos(a1),sin(a1),-sin(a1),cos(a1));
-	mat2 rot2=mat2(cos(a2),sin(a2),-sin(a2),cos(a2));
-	dir.xz*=rot1;
-	dir.xy*=rot2;
-	from.xz*=rot1;
-	from.xy*=rot2;
+    mat2 rot1=mat2(cos(a1),sin(a1),-sin(a1),cos(a1));
+    mat2 rot2=mat2(cos(a2),sin(a2),-sin(a2),cos(a2));
+    dir.xz*=rot1;
+    dir.xy*=rot2;
+    from.xz*=rot1;
+    from.xy*=rot2;
 
     // volumetric rendering
-    float s = 0.1;
+    float s = 0.6;
     float fade = 0.5;
     vec3 v = vec3(-1.0);
     for (int r = 0; r < volsteps; ++r)
     {
         vec3 p = from + s * dir * 0.5;
-		p = abs(vec3(tile) - mod(p, vec3(tile * 2.0))); // tiling fold
+        p = abs(vec3(tile) - mod(p, vec3(tile * 2.0))); // tiling fold
         float pa = 0.0;
         float a = 0.0;
 
         for (int i = 0; i < iterations; ++i)
         {
             p = abs(p) / dot(p, p) - formuparam; // the magic formula
+#if 1
+            float D = abs(length(p)-pa); // absolute sum of average change
+            float fade2 = 1.0 / max(1.0, float(i - 5));
+            a += mix(min(10.0, D), D, fade2);
+#else
             a += abs(length(p) - pa);
             pa = length(p);
+#endif
         }
-		float dm = max(0.0, darkmatter - a * a * 0.001); //dark matter
+        float dm = max(0.0, darkmatter - a * a * 0.001); //dark matter
         fade *= (1.0 - clamp(float(r - 6), 0.0, 1.0)) * (1.0 - dm); // dark matter, don't render near
 
         a = pow(a, 3.2 + noise(uTime * 0.01) * 0.1); // add contrast
@@ -295,7 +301,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     v = mix(vec3(length(v)), v, saturation - noise(uTime * 0.03) * 0.2); //color adjust
     fragColor = vec4(v * 0.01, 1.0);
-    fragColor.r *= 0.5 + noise(uTime * 0.02 + 1.23) * 0.3;
+    // fragColor.r *= 0.5 + noise(uTime * 0.02 + 1.23) * 0.3;
     // fragColor.g *= 0.6;
 }
 `);
