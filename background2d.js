@@ -164,6 +164,11 @@ void main()
 
     const offsetLocation = ctx.getUniformLocation(program, "offset");
 
+    const blackHoleCountLocation = ctx.getUniformLocation(program, "numBlackHoles");
+    const blackHoleDataLocation = ctx.getUniformLocation(program, "blackHoleData");
+
+    ctx.uniform1i(blackHoleCountLocation, 3);
+
     ctx.uniform4f(screenSizeLocation, canvas.width, canvas.height, 1 / canvas.width, 1 / canvas.height);
     ctx.uniform2f(aspectLocation, canvas.width / canvas.height, canvas.height / canvas.width);
 
@@ -193,6 +198,15 @@ void main()
         ctx.uniform1f(timeLocation, time);
 
         ctx.uniform2f(offsetLocation, posX, posY);
+
+
+        // black holes
+        ctx.uniform4fv(blackHoleDataLocation, [
+            0, 0, 0.04, 2e-4,
+            Math.cos(time) * 0.1, Math.sin(time) * 0.1, 0.02, 2e-4,
+            -Math.cos(time * 1.1) * 0.07, Math.sin(time * 1.1) * 0.07, 0.02, 2e-4
+        ]);
+
 
         // render
         // ctx.clear(ctx.COLOR_BUFFER_BIT);
@@ -227,6 +241,10 @@ uniform vec2 offset;
 #define saturation 1.0
 
 
+#define maxNumBlackHoles 5
+uniform int numBlackHoles;
+uniform vec4 blackHoleData[maxNumBlackHoles]; // xy - position, z - radius, w - effect radius
+
 
 // basic noise
 float noise( in float x )
@@ -254,26 +272,31 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec3 from = vec3(offset.x, offset.y, -11.11);
 
-    const float blackHoleEffectRadius = 0.0002;
-    const float blackHoleRadius = 0.04;
+    // const float blackHoleEffectRadius = 0.0002;
+    // const float blackHoleRadius = 0.04;
     const float blackHoleEdgeSharpness = 200.0;
     const float blackHolePower = 2.0;
-    const vec3 blackHoleColor = vec3(1.0);
-
-    const int numBlackHoles = 2;
-    vec2 blackHoles[numBlackHoles];
-    blackHoles[0] = vec2(0.0, 0.0);
-    blackHoles[1] = vec2(cos(uTime) * 0.1, sin(uTime) * 0.1);
+    const vec3 blackHoleColor = vec3(0.0);
 
     float light = 1.0;
     vec2 originalUv = uv;
-    for (int i = 0; i < numBlackHoles; ++i)
+    float blackHoleOutlineGlow = 0.0;
+    vec3 blackHoleOutlineGlowColor = vec3(1.0, 0.3, 0.0);
+    for (int i = 0; i < maxNumBlackHoles; ++i)
     {
-        vec2 pos = blackHoles[i] - offset;
-        float currentDist = distance(pos, originalUv);
-        vec2 warp = normalize(pos - originalUv) * pow(currentDist, -blackHolePower) * blackHoleEffectRadius;
-        uv += warp;
-        light *= clamp((currentDist - blackHoleRadius) * blackHoleEdgeSharpness, 0.0, 1.0);
+        if (i < numBlackHoles)
+        {
+            vec2 pos = blackHoleData[i].xy - offset;
+            float radius = blackHoleData[i].z;
+            float effectRadius = blackHoleData[i].w;
+
+            float currentDist = distance(pos, originalUv);
+            vec2 warp = normalize(pos - originalUv) * pow(currentDist, -blackHolePower) * effectRadius;
+            uv += warp;
+            light *= clamp((currentDist - radius) * blackHoleEdgeSharpness, 0.0, 1.0);
+
+            blackHoleOutlineGlow += 2.0 / (abs(currentDist - radius) * 1000.0);
+        }
     }
 
     vec3 dir = vec3(uv * zoom, 1.0);
@@ -326,6 +349,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     rgb.r *= 0.4 + noise(uTime * 0.02 + 1.23) * 0.3;
     rgb = clamp(rgb, vec3(0.0), vec3(1.0)) * 0.8;
 
+    rgb += blackHoleOutlineGlowColor * clamp(blackHoleOutlineGlow, 0.0, 1.0) * 0.6;
     rgb = mix(blackHoleColor, rgb, light);
 
     fragColor = vec4(rgb, 1.0);
