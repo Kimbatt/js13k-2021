@@ -1,3 +1,5 @@
+(() =>
+{
 
 /**
  * @type { {[key: string]: boolean} }
@@ -21,9 +23,16 @@ window.addEventListener("keyup", ev =>
 
 let posX = 0;
 let posY = 0;
+let lastTime = 0;
 function UpdatePosition()
 {
-    const multiplier = 0.003;
+    let currentTime = performance.now() * 0.001;
+    let delta = currentTime - lastTime;
+    lastTime = currentTime;
+
+    const speed = 0.1;
+
+    let multiplier = speed * delta;
     let x = 0;
     let y = 0;
 
@@ -82,11 +91,8 @@ void main()
     `;
 
     const canvas = document.createElement("canvas");
-    canvas.width = 1920;
-    canvas.height = 1080;
     document.body.appendChild(canvas);
     const ctx = canvas.getContext("webgl");
-    ctx.viewport(0, 0, canvas.width, canvas.height);
 
     const vertShaderObj = ctx.createShader(ctx.VERTEX_SHADER);
     const fragShaderObj = ctx.createShader(ctx.FRAGMENT_SHADER);
@@ -169,12 +175,24 @@ void main()
 
     ctx.uniform1i(blackHoleCountLocation, 3);
 
-    ctx.uniform4f(screenSizeLocation, canvas.width, canvas.height, 1 / canvas.width, 1 / canvas.height);
-    ctx.uniform2f(aspectLocation, canvas.width / canvas.height, canvas.height / canvas.width);
 
     const vertexPositions = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
     ctx.bindBuffer(ctx.ARRAY_BUFFER, vertexBuffer);
     ctx.bufferData(ctx.ARRAY_BUFFER, vertexPositions, ctx.STATIC_DRAW);
+
+
+    function Resize()
+    {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        ctx.viewport(0, 0, canvas.width, canvas.height);
+        ctx.uniform4f(screenSizeLocation, canvas.width, canvas.height, 1 / canvas.width, 1 / canvas.height);
+        ctx.uniform2f(aspectLocation, canvas.width / canvas.height, canvas.height / canvas.width);
+    }
+
+    Resize();
+    window.addEventListener("resize", Resize);
+
 
     let prevPosX = NaN;
     let prevPosY = NaN;
@@ -185,7 +203,7 @@ void main()
 
         if (prevPosX === posX && prevPosY === posY && !keymap["q"])
         {
-            return;
+            // return;
         }
 
         prevPosX = posX;
@@ -202,9 +220,9 @@ void main()
 
         // black holes
         ctx.uniform4fv(blackHoleDataLocation, [
-            0, 0, 0.04, 2e-4,
-            Math.cos(time) * 0.1, Math.sin(time) * 0.1, 0.02, 2e-4,
-            -Math.cos(time * 1.1) * 0.07, Math.sin(time * 1.1) * 0.07, 0.02, 2e-4
+            0, 0, 0.04, 0.0001,
+            Math.cos(time) * 0.1, Math.sin(time) * 0.1, 0.02, 2e-5,
+            -Math.cos(time * 1.1) * 0.07, Math.sin(time * 1.1) * 0.07, 0.02, 2e-5
         ]);
 
 
@@ -267,7 +285,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     //get coords and direction
     vec2 uv = fragCoord - 0.5;
-    uv.y *= uAspect.y;
+    uv *= 0.25;
+    uv.x *= uAspect.x;
 
 
     vec3 from = vec3(offset.x, offset.y, -11.11);
@@ -356,3 +375,5 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // fragColor.g *= 0.6;
 }
 `);
+
+})();

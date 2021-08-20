@@ -14,14 +14,36 @@ canvas
 body
 {
     background: #323639;
+    overflow: hidden;
     color: white;
     margin: 0px;
     padding: 0px;
 }
+
+#scene
+{
+    position: relative;
+    top: 50vh;
+    left: 50vw;
+    width: 0px;
+    height: 0px;
+}
+
+#scene *
+{
+    position: absolute;
+}
+
+#scene, #scene *
+{
+    transform-style: preserve-3d;
+}
+
 </style>
 </head>
 <body>
 
 <script src="background2d.js"></script>
+<script src="css3d.js"></script>
 </body>
 </html>
