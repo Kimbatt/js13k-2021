@@ -1,10 +1,12 @@
-(() =>
-{
 
 /**
  * @type { {[key: string]: boolean} }
  */
 let keymap = {};
+
+(() =>
+{
+
 window.addEventListener("keydown", ev =>
 {
     if (!ev.repeat)
