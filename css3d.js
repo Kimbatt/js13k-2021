@@ -85,7 +85,7 @@ class CSS3dObject
 
     updateTransform()
     {
-        this.element.style.transform = `translate3d(${this.position.x * window.innerHeight}px, ${-this.position.y * window.innerHeight}px, ${this.position.z * window.innerHeight}px) rotateX(${this.rotation.x}deg) rotateY(${this.rotation.y}deg) rotateZ(${this.rotation.z}deg)`;
+        this.element.style.transform = `translate3d(${this.position.x * window.innerHeight}px, ${-this.position.y * window.innerHeight}px, ${this.position.z * window.innerHeight}px) rotateX(${this.rotation.x}deg) rotateY(${this.rotation.y}deg) rotateZ(${-this.rotation.z}deg)`;
         this.styleUpdaterFunctions.forEach(fn => fn());
     }
 }
@@ -103,6 +103,15 @@ class CSS3dCircle extends CSS3dObject
         this.circleElement.style.borderRadius = "50%";
         this.circleElement.style.background = "radial-gradient(#0ff, #000)";
         this.circleElement.style.transform = "translate(-50%, -50%)";
+
+        let arrow = document.createElement("div");
+        arrow.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="black" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path fill="red" d="M4 9h8v-3.586a1 1 0 0 1 1.707 -.707l6.586 6.586a1 1 0 0 1 0 1.414l-6.586 6.586a1 1 0 0 1 -1.707 -.707v-3.586h-8a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1z" />
+
+
+        </svg>`;
+        this.circleElement.appendChild(arrow);
 
         this.styleUpdaterFunctions.push(() =>
         {
@@ -181,6 +190,9 @@ function CreateCube(px, py, size)
 
 CreateCube(0, 0, 0.05);
 // CreateCube(0.2, 0.2, 0.05);
+// CreateCube(-0.2, 0.2, 0.05);
+// CreateCube(-0.2, -0.2, 0.05);
+// CreateCube(0.2, -0.2, 0.05);
 
 let circle = new CSS3dCircle(0.05);
 scene.add(circle);
@@ -231,11 +243,40 @@ function Frame(time)
     scene.render();
 }
 
+/**
+ * @param {number} x
+ * @param {number} min
+ * @param {number} max
+ */
+function Clamp(x, min, max)
+{
+    return x < min ? min : x > max ? max : x;
+}
+
+/**
+ *
+ * @param {number} angle in radians
+ */
+function NormalizeAngle(angle)
+{
+    if (angle > Math.PI)
+    {
+        angle -= Math.PI * 2;
+    }
+    else if (angle < -Math.PI)
+    {
+        angle += Math.PI * 2;
+    }
+
+    return angle;
+}
+
 let velocityX = 2;
-let velocityY = 0;
+let velocityY = -2;
+let facingAngle = Math.atan2(velocityY, velocityX);
 function PhysicsStep()
 {
-    const speed = 0.1;
+    const speed = 0.05;
     const mult = fixedDelta * speed;
     for (const cube of cubes)
     {
@@ -243,9 +284,9 @@ function PhysicsStep()
         let dirY = cube.position.y - circle.position.y;
 
         // TODO?: use planet radius here
-        let distanceSq = Math.max(1, dirX * dirX + dirY * dirY);
+        let distanceSq = Math.max(0.001, dirX * dirX + dirY * dirY);
         // distanceSq = Math.sqrt(distanceSq);
-        const param = 10;
+        const param = 50;
         let magnitude = param / distanceSq;
 
 
@@ -253,10 +294,31 @@ function PhysicsStep()
         velocityY += dirY * magnitude * mult;
     }
 
-    // velocityX *= 0.999;
+    if (keymap[" "])
+    {
+        let x = Math.cos(facingAngle);
+        let y = Math.sin(facingAngle);
+
+        const boost = 400;
+
+        velocityX += x * mult * boost;
+        velocityY += y * mult * boost;
+    }
+
+    velocityX *= 1 - mult * 5;
+    velocityY *= 1 - mult * 5;
 
     circle.position.x += velocityX * mult;
     circle.position.y += velocityY * mult;
+
+    let currentAngle = Math.atan2(velocityY, velocityX);
+    let angleDiff = NormalizeAngle(currentAngle - facingAngle);
+
+    const maxAngleDiff = 80 * mult;
+    angleDiff = Clamp(angleDiff, -maxAngleDiff, maxAngleDiff);
+    facingAngle = NormalizeAngle(facingAngle + angleDiff);
+
+    circle.rotation.z = facingAngle * 180 / Math.PI;
 }
 
 window.requestAnimationFrame(Frame);
