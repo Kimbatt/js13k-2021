@@ -4,25 +4,18 @@
  */
 let keymap = {};
 
-(() =>
-{
-
 window.addEventListener("keydown", ev =>
 {
-    if (!ev.repeat)
-    {
-        keymap[ev.key] = true;
-    }
+    keymap[ev.key] = true;
 });
 
 window.addEventListener("keyup", ev =>
 {
-    if (!ev.repeat)
-    {
-        keymap[ev.key] = false;
-    }
+    keymap[ev.key] = false;
 });
 
+(() =>
+{
 let posX = 0;
 let posY = 0;
 let lastTime = 0;

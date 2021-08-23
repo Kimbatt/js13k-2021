@@ -85,7 +85,7 @@ class CSS3dObject
 
     updateTransform()
     {
-        this.element.style.transform = `rotateX(${this.rotation.x}deg) rotateY(${this.rotation.y}deg) rotateZ(${this.rotation.z}deg) translate3d(${this.position.x * window.innerHeight}px, ${this.position.y * window.innerHeight}px, ${this.position.z * window.innerHeight}px)`;
+        this.element.style.transform = `translate3d(${this.position.x * window.innerHeight}px, ${-this.position.y * window.innerHeight}px, ${this.position.z * window.innerHeight}px) rotateX(${this.rotation.x}deg) rotateY(${this.rotation.y}deg) rotateZ(${this.rotation.z}deg)`;
         this.styleUpdaterFunctions.forEach(fn => fn());
     }
 }
@@ -124,7 +124,6 @@ class CSS3dCube extends CSS3dObject
     {
         super();
 
-        this.element.style.animation = "rot 4s linear infinite";
         this.sideUpdaters = [];
 
         /**
@@ -166,21 +165,41 @@ class CSS3dCube extends CSS3dObject
 let scene = new CSS3dScene();
 let camera = scene.camera;
 
-let cube = new CSS3dCube(0.1);
-scene.add(cube);
+/**
+ * @type {CSS3dCube[]}
+ */
+let cubes = [];
 
-let circle = new CSS3dCircle(0.1);
+function CreateCube(px, py, size)
+{
+    let cube = new CSS3dCube(size);
+    cube.position.x = px;
+    cube.position.y = py;
+    scene.add(cube);
+    cubes.push(cube);
+}
+
+CreateCube(0, 0, 0.05);
+// CreateCube(0.2, 0.2, 0.05);
+
+let circle = new CSS3dCircle(0.05);
 scene.add(circle);
 
+circle.position.x = -0.3;
+circle.position.y = -0.3;
+
+let lastTime = 0;
+let accumulatedTime = 0;
+const fixedDelta = 1 / 60;
 /**
  * @param {number} time
  */
-let lastTime = 0;
 function Frame(time)
 {
     time /= 1000;
     let delta = time - lastTime;
     lastTime = time;
+    accumulatedTime += delta;
     window.requestAnimationFrame(Frame);
 
     const speed = 0.1;
@@ -197,11 +216,47 @@ function Frame(time)
     camera.position.x += x * multiplier;
     camera.position.y += y * multiplier;
 
-    circle.position.x = Math.cos(time * 2) * 0.3;
-    circle.position.y = Math.sin(time * 2) * 0.3;
-    cube.rotation.y = time * 50;
+
+    for (const cube of cubes)
+    {
+        cube.rotation.y = time * 50;
+    }
+
+    while (accumulatedTime > 0)
+    {
+        accumulatedTime -= fixedDelta;
+        PhysicsStep();
+    }
 
     scene.render();
+}
+
+let velocityX = 2;
+let velocityY = 0;
+function PhysicsStep()
+{
+    const speed = 0.1;
+    const mult = fixedDelta * speed;
+    for (const cube of cubes)
+    {
+        let dirX = cube.position.x - circle.position.x;
+        let dirY = cube.position.y - circle.position.y;
+
+        // TODO?: use planet radius here
+        let distanceSq = Math.max(1, dirX * dirX + dirY * dirY);
+        // distanceSq = Math.sqrt(distanceSq);
+        const param = 10;
+        let magnitude = param / distanceSq;
+
+
+        velocityX += dirX * magnitude * mult;
+        velocityY += dirY * magnitude * mult;
+    }
+
+    // velocityX *= 0.999;
+
+    circle.position.x += velocityX * mult;
+    circle.position.y += velocityY * mult;
 }
 
 window.requestAnimationFrame(Frame);
