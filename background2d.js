@@ -46,14 +46,14 @@ function UpdatePosition()
  */
 function CreateWebglCanvas(shader)
 {
-    const vertexShader = `
-attribute vec2 aVertexPosition;
+    const vertexShader = `#version 300 es
+in vec2 aVertexPosition;
 
 uniform vec4 uScreenSize;
 
 uniform float uTime;
 
-varying vec4 vPixelCoord;
+out vec4 vPixelCoord;
 
 void main()
 {
@@ -65,14 +65,15 @@ void main()
     `;
 
 
-    const fragmentShader = `
+    const fragmentShader = `#version 300 es
 precision highp float;
 
 uniform float uTime;
 uniform vec4 uScreenSize;
 uniform vec2 uAspect;
 
-varying vec4 vPixelCoord;
+in vec4 vPixelCoord;
+out vec4 fragColor;
 
 ${shader}
 
@@ -81,13 +82,13 @@ void main()
 {
     vec4 color;
     mainImage(color, vPixelCoord.xy);
-    gl_FragColor = color;
+    fragColor = color;
 }
     `;
 
     const canvas = document.createElement("canvas");
     document.body.appendChild(canvas);
-    const ctx = canvas.getContext("webgl");
+    const ctx = canvas.getContext("webgl2");
 
     const vertShaderObj = ctx.createShader(ctx.VERTEX_SHADER);
     const fragShaderObj = ctx.createShader(ctx.FRAGMENT_SHADER);
@@ -173,6 +174,8 @@ void main()
 
     const vertexPositions = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
     ctx.bindBuffer(ctx.ARRAY_BUFFER, vertexBuffer);
+    ctx.enableVertexAttribArray(vertexLocation);
+    ctx.vertexAttribPointer(vertexLocation, 2, ctx.FLOAT, false, 0, 0);
     ctx.bufferData(ctx.ARRAY_BUFFER, vertexPositions, ctx.STATIC_DRAW);
 
 
@@ -223,9 +226,7 @@ void main()
 
         // render
         // ctx.clear(ctx.COLOR_BUFFER_BIT);
-        ctx.enableVertexAttribArray(vertexLocation);
         ctx.bindBuffer(ctx.ARRAY_BUFFER, vertexBuffer);
-        ctx.vertexAttribPointer(vertexLocation, 2, ctx.FLOAT, false, 0, 0);
 
         ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, vertexPositions.length / 2);
     }
@@ -276,6 +277,67 @@ float noise( in float x )
     return s*f*(f-1.0)*((16.0*k-4.0)*f*(f-1.0)-1.0);
 }
 
+
+
+float hash(vec3 p)
+{
+    p  = fract(p * 0.3183099 + 0.1);
+    p *= 17.0;
+    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+
+vec3 hash3(vec3 p)
+{
+    p = vec3(
+        dot(p,vec3(127.1, 311.7, 74.7)),
+        dot(p,vec3(269.5, 183.3, 246.1)),
+        dot(p,vec3(113.5, 271.9, 124.6))
+    );
+
+    return 2.0 * fract(sin(p) * 43758.5453123) - 1.0;
+}
+
+float noise3( in vec3 p )
+{
+    // p += vec3(uTime);
+    vec3 i = floor( p );
+    vec3 f = fract( p );
+
+    vec3 u = f*f*(3.0-2.0*f);
+
+    return mix( mix( mix( dot( hash3( i + vec3(0.0,0.0,0.0) ), f - vec3(0.0,0.0,0.0) ),
+                          dot( hash3( i + vec3(1.0,0.0,0.0) ), f - vec3(1.0,0.0,0.0) ), u.x),
+                     mix( dot( hash3( i + vec3(0.0,1.0,0.0) ), f - vec3(0.0,1.0,0.0) ),
+                          dot( hash3( i + vec3(1.0,1.0,0.0) ), f - vec3(1.0,1.0,0.0) ), u.x), u.y),
+                mix( mix( dot( hash3( i + vec3(0.0,0.0,1.0) ), f - vec3(0.0,0.0,1.0) ),
+                          dot( hash3( i + vec3(1.0,0.0,1.0) ), f - vec3(1.0,0.0,1.0) ), u.x),
+                     mix( dot( hash3( i + vec3(0.0,1.0,1.0) ), f - vec3(0.0,1.0,1.0) ),
+                          dot( hash3( i + vec3(1.0,1.0,1.0) ), f - vec3(1.0,1.0,1.0) ), u.x), u.y), u.z );
+}
+
+float simplex_noise(vec3 p)
+{
+    const float K1 = 0.333333333;
+    const float K2 = 0.166666667;
+
+    vec3 i = floor(p + (p.x + p.y + p.z) * K1);
+    vec3 d0 = p - (i - (i.x + i.y + i.z) * K2);
+
+    vec3 e = step(vec3(0.0), d0 - d0.yzx);
+    vec3 i1 = e * (1.0 - e.zxy);
+    vec3 i2 = 1.0 - e.zxy * (1.0 - e);
+
+    vec3 d1 = d0 - (i1 - 1.0 * K2);
+    vec3 d2 = d0 - (i2 - 2.0 * K2);
+    vec3 d3 = d0 - (1.0 - 3.0 * K2);
+
+    vec4 h = max(0.6 - vec4(dot(d0, d0), dot(d1, d1), dot(d2, d2), dot(d3, d3)), 0.0);
+    vec4 n = h * h * h * h * vec4(dot(d0, hash3(i)), dot(d1, hash3(i + i1)), dot(d2, hash3(i + i2)), dot(d3, hash3(i + 1.0)));
+
+    return dot(vec4(31.316), n);
+}
+
+
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     //get coords and direction
@@ -313,72 +375,97 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         }
     }
 
-    vec3 dir = vec3(uv * zoom, 1.0);
-
-    float a1 = 1.0;
-    float a2 = 2.5;
-    mat2 rot1=mat2(cos(a1),sin(a1),-sin(a1),cos(a1));
-    mat2 rot2=mat2(cos(a2),sin(a2),-sin(a2),cos(a2));
-    dir.xz*=rot1;
-    dir.xy*=rot2;
-    from.xz*=rot1;
-    from.xy*=rot2;
-
-    // volumetric rendering
-    float s = 0.5;
-    float fade = 0.9;
-    vec3 v = vec3(-1.0);
-    for (int r = 0; r < volsteps; ++r)
+    vec3 rgb;
     {
-        vec3 p = from + s * dir * 0.5;
-        p = abs(vec3(tile) - mod(p, vec3(tile * 2.0))); // tiling fold
-        float a = 0.0;
+        vec3 dir = vec3(uv * zoom, 1.0);
 
-        vec3 sp = p;
+        float a1 = 1.0;
+        float a2 = 2.5;
+        mat2 rot1=mat2(cos(a1),sin(a1),-sin(a1),cos(a1));
+        mat2 rot2=mat2(cos(a2),sin(a2),-sin(a2),cos(a2));
+        dir.xz*=rot1;
+        dir.xy*=rot2;
+        from.xz*=rot1;
+        from.xy*=rot2;
 
-        for (int i = 0; i < iterations; ++i)
+        // volumetric rendering
+        float s = 0.5;
+        float fade = 0.9;
+        vec3 v = vec3(-1.0);
+        for (int r = 0; r < volsteps; ++r)
         {
-            p = abs(p) / dot(p, p) - formuparam; // the magic formula
-            float D = length(p); // absolute sum of average change
-            float fade2 = 5.0 / (float(i) * 2.0 + 20.0);
-            a += mix(min(15.0, D), D, fade2);
+            vec3 p = from + s * dir * 0.5;
+            p = abs(vec3(tile) - mod(p, vec3(tile * 2.0))); // tiling fold
+            float a = 0.0;
+
+            vec3 sp = p;
+
+            for (int i = 0; i < iterations; ++i)
+            {
+                p = abs(p) / dot(p, p) - formuparam; // the magic formula
+                float D = length(p); // absolute sum of average change
+                float fade2 = 5.0 / (float(i) * 2.0 + 20.0);
+                a += mix(min(15.0, D), D, fade2);
+            }
+            // float dm = max(0.0, darkmatter - a * a * 0.001); //dark matter
+            // fade *= (1.0 - clamp(float(r - 8), 0.0, 1.0)) * (1.0 - dm); // dark matter, don't render near
+
+            fade *= clamp(5.0 / float(r + 1), 0.0, 1.0);
+
+            a = pow(a, 3.2 + noise(uTime * 0.01) * 0.1); // add contrast
+
+            v += fade;
+            v -= 0.2;
+
+            v += vec3(s * s * s * s, s * s, s) * a * brightness * fade; // coloring based on distance
+            fade *= distfading - noise(uTime * 0.01) * 0.1; // distance fading
+            s += stepsize;
         }
-        // float dm = max(0.0, darkmatter - a * a * 0.001); //dark matter
-        // fade *= (1.0 - clamp(float(r - 8), 0.0, 1.0)) * (1.0 - dm); // dark matter, don't render near
 
-        fade *= clamp(5.0 / float(r + 1), 0.0, 1.0);
-
-        a = pow(a, 3.2 + noise(uTime * 0.01) * 0.1); // add contrast
-
-        v += fade;
-        v -= 0.2;
-
-        v += vec3(s * s * s * s, s * s, s) * a * brightness * fade; // coloring based on distance
-        fade *= distfading - noise(uTime * 0.01) * 0.1; // distance fading
-        s += stepsize;
+        //v = mix(vec3(length(v)), v, saturation - noise(uTime * 0.03) * 0.2); //color adjust
+        rgb = pow(v * 0.01 * sqrt(s), vec3(1.5)) * 1.5;
+        rgb.r *= 0.4 + noise(uTime * 0.02 + 1.23) * 0.3;
+        rgb = clamp(rgb, vec3(0.0), vec3(1.0)) * 0.8;
     }
-
-    //v = mix(vec3(length(v)), v, saturation - noise(uTime * 0.03) * 0.2); //color adjust
-    vec3 rgb = pow(v * 0.01 * sqrt(s), vec3(1.5)) * 1.5;
-    rgb.r *= 0.4 + noise(uTime * 0.02 + 1.23) * 0.3;
-    rgb = clamp(rgb, vec3(0.0), vec3(1.0)) * 0.8;
-
 
 
     // planets
-    vec2 planetPosition = vec2(-0.2, 0.0);
-    float planetRadius = 0.04;
+    {
+        vec2 planetPosition = vec2(-0.2, 0.0);
+        float planetRadius = 0.04;
 
+        vec3 seed = vec3(planetPosition * 10.0, 0.0 );
 
-    planetPosition -= offset;
-    float currentPlanetDistance = distance(planetPosition, originalUv);
-    vec3 planetColor = vec3(0.0, 1.0, 0.0);
-    planetColor = planetColor * mix(1.0, 0.4, pow(currentPlanetDistance / planetRadius, 2.0));
-    // TODO: noise
+        planetPosition -= offset;
+        float currentPlanetDistance = distance(planetPosition, originalUv);
+        vec3 originalPlanetColor = vec3(1.0, 0.7, 0.5);
 
+        vec2 planetDir = (originalUv - planetPosition) / planetRadius;
+        float len = clamp(length(planetDir), 0.0, 1.0);
+        float z = sqrt(1.0 - len * len);
+        vec3 normal = vec3(planetDir, z);
 
-    rgb = mix(planetColor, rgb, smoothstep(0.0, 1.0, (currentPlanetDistance - planetRadius) * 500.0));
+        vec3 planetNoise = vec3(0.0);
 
+        float mul = 1.0;
+        float scale = planetRadius * 50.0;
+        float mulmul = 2.5;
+        planetNoise += (simplex_noise(seed + normal * mul * scale)) / mul;
+        mul *= mulmul;
+        planetNoise += (simplex_noise(seed + normal * mul * scale)) / mul;
+        mul *= mulmul;
+        planetNoise += (simplex_noise(seed + normal * mul * scale)) / mul;
+
+        planetNoise = smoothstep(-1.5, 1.5, planetNoise);
+
+        vec3 planetColor = originalPlanetColor * planetNoise;
+        float side = smoothstep(0.0, 1.0, (currentPlanetDistance - planetRadius) * 1000.0);
+        planetColor *= mix(0.2, 1.0, pow(dot(normal, vec3(0.0, 0.0, 1.0)), 2.0));
+
+        float glowRadius = -0.001;
+        rgb += smoothstep(1.0, 0.0, (currentPlanetDistance - planetRadius - glowRadius) * 200.0) * originalPlanetColor * 0.4;
+        rgb = mix(planetColor, rgb, smoothstep(0.0, 1.0, (currentPlanetDistance - planetRadius) * 1000.0));
+    }
 
 
 
