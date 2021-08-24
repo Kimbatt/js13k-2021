@@ -198,7 +198,7 @@ void main()
 
         if (prevPosX === posX && prevPosY === posY && !keymap["q"])
         {
-            // return;
+            return;
         }
 
         prevPosX = posX;
@@ -362,6 +362,28 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 rgb = pow(v * 0.01 * sqrt(s), vec3(1.5)) * 1.5;
     rgb.r *= 0.4 + noise(uTime * 0.02 + 1.23) * 0.3;
     rgb = clamp(rgb, vec3(0.0), vec3(1.0)) * 0.8;
+
+
+
+    // planets
+    vec2 planetPosition = vec2(-0.2, 0.0);
+    float planetRadius = 0.04;
+
+
+    planetPosition -= offset;
+    float currentPlanetDistance = distance(planetPosition, originalUv);
+    vec3 planetColor = vec3(0.0, 1.0, 0.0);
+    planetColor = planetColor * mix(1.0, 0.4, pow(currentPlanetDistance / planetRadius, 2.0));
+    // TODO: noise
+
+
+    rgb = mix(planetColor, rgb, smoothstep(0.0, 1.0, (currentPlanetDistance - planetRadius) * 500.0));
+
+
+
+
+
+
 
     rgb += blackHoleOutlineGlowColor * clamp(blackHoleOutlineGlow, 0.0, 1.0) * 0.6;
     rgb = mix(blackHoleColor, rgb, light);
