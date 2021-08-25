@@ -44,148 +44,16 @@ function UpdatePosition()
  * @param {string} shader
  * @returns {void}
  */
-function CreateWebglCanvas(shader)
+function CreateBackground(shader)
 {
-    const vertexShader = `#version 300 es
-in vec2 aVertexPosition;
+    const c = new WebGLCanvas(shader, ["offset", "numBlackHoles", "blackHoleData"]);
+    document.body.appendChild(c.canvas);
 
-uniform vec4 uScreenSize;
-
-uniform float uTime;
-
-out vec4 vPixelCoord;
-
-void main()
-{
-    vec2 normalizedPosition = (aVertexPosition + vec2(1.0)) * 0.5;
-    vec2 screenPosition = normalizedPosition * uScreenSize.xy;
-    vPixelCoord = vec4(normalizedPosition, screenPosition);
-    gl_Position = vec4(aVertexPosition, 0.0, 1.0);
-}
-    `;
-
-
-    const fragmentShader = `#version 300 es
-precision highp float;
-
-uniform float uTime;
-uniform vec4 uScreenSize;
-uniform vec2 uAspect;
-
-in vec4 vPixelCoord;
-out vec4 fragColor;
-
-${shader}
-
-
-void main()
-{
-    vec4 color;
-    mainImage(color, vPixelCoord.xy);
-    fragColor = color;
-}
-    `;
-
-    const canvas = document.createElement("canvas");
-    document.body.appendChild(canvas);
-    const ctx = canvas.getContext("webgl2");
-
-    const vertShaderObj = ctx.createShader(ctx.VERTEX_SHADER);
-    const fragShaderObj = ctx.createShader(ctx.FRAGMENT_SHADER);
-
-    if (!vertShaderObj || !fragShaderObj)
-    {
-        console.error("Cannot create shader object");
-        return;
-    }
-
-    ctx.shaderSource(vertShaderObj, vertexShader);
-    ctx.shaderSource(fragShaderObj, fragmentShader);
-    ctx.compileShader(vertShaderObj);
-    ctx.compileShader(fragShaderObj);
-
-    function LogShader(shaderSource)
-    {
-        const lines = shaderSource.split("\n");
-        const padCount = Math.log10(lines.length + 1) | 0 + 4;
-        console.error("\n" + lines.map((line, idx) => (idx + 1).toString().padEnd(padCount, " ") + line).join("\n"));
-    }
-
-    const vertexShaderError = ctx.getShaderInfoLog(vertShaderObj);
-    if (vertexShaderError && vertexShaderError.length !== 0)
-    {
-        console.error("Error compiling vertex shader");
-        console.error(vertexShaderError);
-        LogShader(vertexShader);
-        return;
-    }
-
-    const fragmentShaderError = ctx.getShaderInfoLog(fragShaderObj);
-    if (fragmentShaderError && fragmentShaderError.length !== 0)
-    {
-        console.error("Error compiling fragment shader");
-        console.error(fragmentShaderError);
-        LogShader(fragmentShader);
-        return;
-    }
-
-    const program = ctx.createProgram();
-
-    if (!program)
-    {
-        console.error("Cannot create WebGL program");
-        return;
-    }
-
-    ctx.attachShader(program, vertShaderObj);
-    ctx.attachShader(program, fragShaderObj);
-    ctx.linkProgram(program);
-
-    const programError = ctx.getProgramInfoLog(program);
-    if (programError && programError.length !== 0)
-    {
-        console.error("Error linking program");
-        console.error(programError);
-        return;
-    }
-
-    ctx.useProgram(program);
-
-    const vertexBuffer = ctx.createBuffer();
-
-    if (!vertexBuffer)
-    {
-        console.error("Cannot create buffers");
-        return;
-    }
-
-    const vertexLocation = ctx.getAttribLocation(program, "aVertexPosition");
-    const timeLocation = ctx.getUniformLocation(program, "uTime");
-    const screenSizeLocation = ctx.getUniformLocation(program, "uScreenSize");
-    const aspectLocation = ctx.getUniformLocation(program, "uAspect");
-
-    const offsetLocation = ctx.getUniformLocation(program, "offset");
-
-    const blackHoleCountLocation = ctx.getUniformLocation(program, "numBlackHoles");
-    const blackHoleDataLocation = ctx.getUniformLocation(program, "blackHoleData");
-
-    ctx.uniform1i(blackHoleCountLocation, 3);
-
-
-    const vertexPositions = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
-    ctx.bindBuffer(ctx.ARRAY_BUFFER, vertexBuffer);
-    ctx.enableVertexAttribArray(vertexLocation);
-    ctx.vertexAttribPointer(vertexLocation, 2, ctx.FLOAT, false, 0, 0);
-    ctx.bufferData(ctx.ARRAY_BUFFER, vertexPositions, ctx.STATIC_DRAW);
-
+    c.ctx.uniform1i(c.uniformLocations["numBlackHoles"], 3);
 
     function Resize()
     {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        ctx.viewport(0, 0, canvas.width, canvas.height);
-        ctx.uniform4f(screenSizeLocation, canvas.width, canvas.height, 1 / canvas.width, 1 / canvas.height);
-        ctx.uniform2f(aspectLocation, canvas.width / canvas.height, canvas.height / canvas.width);
+        c.resize(window.innerWidth, window.innerHeight);
     }
 
     Resize();
@@ -210,31 +78,24 @@ void main()
 
         const time = performance.now() * 0.001;
 
-        // time
-        ctx.uniform1f(timeLocation, time);
-
-        ctx.uniform2f(offsetLocation, posX, posY);
+        c.ctx.uniform2f(c.uniformLocations["offset"], posX, posY);
 
 
         // black holes
-        ctx.uniform4fv(blackHoleDataLocation, [
+        c.ctx.uniform4fv(c.uniformLocations["blackHoleData"], [
             0, 0, 0.04, 0.0001,
             Math.cos(time) * 0.1, Math.sin(time) * 0.1, 0.02, 2e-5,
             -Math.cos(time * 1.1) * 0.07, Math.sin(time * 1.1) * 0.07, 0.02, 2e-5
         ]);
 
 
-        // render
-        // ctx.clear(ctx.COLOR_BUFFER_BIT);
-        ctx.bindBuffer(ctx.ARRAY_BUFFER, vertexBuffer);
-
-        ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, vertexPositions.length / 2);
+        c.render();
     }
 
-    Draw();
+    // Draw();
 }
 
-CreateWebglCanvas(`
+CreateBackground(`
 // https://www.shadertoy.com/view/XlfGRj
 
 uniform vec2 offset;
@@ -261,7 +122,7 @@ uniform vec4 blackHoleData[maxNumBlackHoles]; // xy - position, z - radius, w - 
 
 
 // basic noise
-float noise( in float x )
+float noise(in float x)
 {
     // setup
     float i = floor(x);
@@ -278,67 +139,7 @@ float noise( in float x )
 }
 
 
-
-float hash(vec3 p)
-{
-    p  = fract(p * 0.3183099 + 0.1);
-    p *= 17.0;
-    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
-}
-
-vec3 hash3(vec3 p)
-{
-    p = vec3(
-        dot(p,vec3(127.1, 311.7, 74.7)),
-        dot(p,vec3(269.5, 183.3, 246.1)),
-        dot(p,vec3(113.5, 271.9, 124.6))
-    );
-
-    return 2.0 * fract(sin(p) * 43758.5453123) - 1.0;
-}
-
-float noise3( in vec3 p )
-{
-    // p += vec3(uTime);
-    vec3 i = floor( p );
-    vec3 f = fract( p );
-
-    vec3 u = f*f*(3.0-2.0*f);
-
-    return mix( mix( mix( dot( hash3( i + vec3(0.0,0.0,0.0) ), f - vec3(0.0,0.0,0.0) ),
-                          dot( hash3( i + vec3(1.0,0.0,0.0) ), f - vec3(1.0,0.0,0.0) ), u.x),
-                     mix( dot( hash3( i + vec3(0.0,1.0,0.0) ), f - vec3(0.0,1.0,0.0) ),
-                          dot( hash3( i + vec3(1.0,1.0,0.0) ), f - vec3(1.0,1.0,0.0) ), u.x), u.y),
-                mix( mix( dot( hash3( i + vec3(0.0,0.0,1.0) ), f - vec3(0.0,0.0,1.0) ),
-                          dot( hash3( i + vec3(1.0,0.0,1.0) ), f - vec3(1.0,0.0,1.0) ), u.x),
-                     mix( dot( hash3( i + vec3(0.0,1.0,1.0) ), f - vec3(0.0,1.0,1.0) ),
-                          dot( hash3( i + vec3(1.0,1.0,1.0) ), f - vec3(1.0,1.0,1.0) ), u.x), u.y), u.z );
-}
-
-float simplex_noise(vec3 p)
-{
-    const float K1 = 0.333333333;
-    const float K2 = 0.166666667;
-
-    vec3 i = floor(p + (p.x + p.y + p.z) * K1);
-    vec3 d0 = p - (i - (i.x + i.y + i.z) * K2);
-
-    vec3 e = step(vec3(0.0), d0 - d0.yzx);
-    vec3 i1 = e * (1.0 - e.zxy);
-    vec3 i2 = 1.0 - e.zxy * (1.0 - e);
-
-    vec3 d1 = d0 - (i1 - 1.0 * K2);
-    vec3 d2 = d0 - (i2 - 2.0 * K2);
-    vec3 d3 = d0 - (1.0 - 3.0 * K2);
-
-    vec4 h = max(0.6 - vec4(dot(d0, d0), dot(d1, d1), dot(d2, d2), dot(d3, d3)), 0.0);
-    vec4 n = h * h * h * h * vec4(dot(d0, hash3(i)), dot(d1, hash3(i + i1)), dot(d2, hash3(i + i2)), dot(d3, hash3(i + 1.0)));
-
-    return dot(vec4(31.316), n);
-}
-
-
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
+void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
     //get coords and direction
     vec2 uv = fragCoord - 0.5;
@@ -427,50 +228,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         rgb.r *= 0.4 + noise(uTime * 0.02 + 1.23) * 0.3;
         rgb = clamp(rgb, vec3(0.0), vec3(1.0)) * 0.8;
     }
-
-
-    // planets
-    {
-        vec2 planetPosition = vec2(-0.2, 0.0);
-        float planetRadius = 0.04;
-
-        vec3 seed = vec3(planetPosition * 10.0, 0.0 );
-
-        planetPosition -= offset;
-        float currentPlanetDistance = distance(planetPosition, originalUv);
-        vec3 originalPlanetColor = vec3(1.0, 0.7, 0.5);
-
-        vec2 planetDir = (originalUv - planetPosition) / planetRadius;
-        float len = clamp(length(planetDir), 0.0, 1.0);
-        float z = sqrt(1.0 - len * len);
-        vec3 normal = vec3(planetDir, z);
-
-        vec3 planetNoise = vec3(0.0);
-
-        float mul = 1.0;
-        float scale = planetRadius * 50.0;
-        float mulmul = 2.5;
-        planetNoise += (simplex_noise(seed + normal * mul * scale)) / mul;
-        mul *= mulmul;
-        planetNoise += (simplex_noise(seed + normal * mul * scale)) / mul;
-        mul *= mulmul;
-        planetNoise += (simplex_noise(seed + normal * mul * scale)) / mul;
-
-        planetNoise = smoothstep(-1.5, 1.5, planetNoise);
-
-        vec3 planetColor = originalPlanetColor * planetNoise;
-        float side = smoothstep(0.0, 1.0, (currentPlanetDistance - planetRadius) * 1000.0);
-        planetColor *= mix(0.2, 1.0, pow(dot(normal, vec3(0.0, 0.0, 1.0)), 2.0));
-
-        float glowRadius = -0.001;
-        rgb += smoothstep(1.0, 0.0, (currentPlanetDistance - planetRadius - glowRadius) * 200.0) * originalPlanetColor * 0.4;
-        rgb = mix(planetColor, rgb, smoothstep(0.0, 1.0, (currentPlanetDistance - planetRadius) * 1000.0));
-    }
-
-
-
-
-
 
     rgb += blackHoleOutlineGlowColor * clamp(blackHoleOutlineGlow, 0.0, 1.0) * 0.6;
     rgb = mix(blackHoleColor, rgb, light);
