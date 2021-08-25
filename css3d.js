@@ -105,18 +105,29 @@ class CSS3dCircle extends CSS3dObject
         this.circleElement.style.transform = "translate(-50%, -50%)";
 
         let arrow = document.createElement("div");
-        arrow.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="black" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path fill="red" d="M4 9h8v-3.586a1 1 0 0 1 1.707 -.707l6.586 6.586a1 1 0 0 1 0 1.414l-6.586 6.586a1 1 0 0 1 -1.707 -.707v-3.586h-8a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1z" />
+        let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttributeNS(null, "viewBox", "0 0 24 24");
+        svg.setAttributeNS(null, "stroke-width", "1.5");
+        svg.setAttributeNS(null, "stroke", "black");
+        svg.setAttributeNS(null, "fill", "none");
+        svg.setAttributeNS(null, "stroke-linecap", "round");
+        svg.setAttributeNS(null, "stroke-linejoin", "round");
 
+        let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttributeNS(null, "fill", "red");
+        path.setAttributeNS(null, "d", "M4 9h8v-3.586a1 1 0 0 1 1.707 -.707l6.586 6.586a1 1 0 0 1 0 1.414l-6.586 6.586a1 1 0 0 1 -1.707 -.707v-3.586h-8a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1z");
 
-        </svg>`;
+        svg.appendChild(path);
+        arrow.appendChild(svg);
         this.circleElement.appendChild(arrow);
 
         this.styleUpdaterFunctions.push(() =>
         {
             this.circleElement.style.width = (size * window.innerHeight) + "px";
             this.circleElement.style.height = (size * window.innerHeight) + "px";
+
+            svg.setAttributeNS(null, "width", `${0.05 * window.innerHeight}px`);
+            svg.setAttributeNS(null, "height", `${0.05 * window.innerHeight}px`);
         });
 
         this.element.appendChild(this.circleElement);
@@ -166,213 +177,3 @@ class CSS3dCube extends CSS3dObject
         this.updateTransform();
     }
 }
-
-
-(() =>
-{
-
-let scene = new CSS3dScene();
-let camera = scene.camera;
-
-/**
- * @type {CSS3dCube[]}
- */
-let cubes = [];
-
-function CreateCube(px, py, size)
-{
-    let cube = new CSS3dCube(size);
-    cube.position.x = px;
-    cube.position.y = py;
-    scene.add(cube);
-    cubes.push(cube);
-}
-
-CreateCube(0, 0, 0.05);
-// CreateCube(0.2, 0.2, 0.05);
-// CreateCube(-0.2, 0.2, 0.05);
-// CreateCube(-0.2, -0.2, 0.05);
-// CreateCube(0.2, -0.2, 0.05);
-
-let circle = new CSS3dCircle(0.05);
-scene.add(circle);
-
-circle.position.x = -0.3;
-circle.position.y = -0.3;
-
-let lastTime = 0;
-let accumulatedTime = 0;
-const fixedDelta = 1 / 60;
-/**
- * @param {number} time
- */
-function Frame(time)
-{
-    time /= 1000;
-    let delta = time - lastTime;
-    lastTime = time;
-    accumulatedTime += delta;
-    window.requestAnimationFrame(Frame);
-
-    const speed = 0.1;
-
-    const multiplier = speed * delta * 4;
-    let x = 0;
-    let y = 0;
-
-    if (keymap["a"]) x -= 1;
-    if (keymap["d"]) x += 1;
-    if (keymap["w"]) y += 1;
-    if (keymap["s"]) y -= 1;
-
-    camera.position.x += x * multiplier;
-    camera.position.y += y * multiplier;
-
-
-    for (const cube of cubes)
-    {
-        cube.rotation.y = time * 50;
-    }
-
-    while (accumulatedTime > 0)
-    {
-        accumulatedTime -= fixedDelta;
-        PhysicsStep();
-    }
-
-    scene.render();
-}
-
-/**
- * @param {number} x
- * @param {number} min
- * @param {number} max
- */
-function Clamp(x, min, max)
-{
-    return x < min ? min : x > max ? max : x;
-}
-
-/**
- *
- * @param {number} angle in radians
- */
-function NormalizeAngle(angle)
-{
-    if (angle > Math.PI)
-    {
-        angle -= Math.PI * 2;
-    }
-    else if (angle < -Math.PI)
-    {
-        angle += Math.PI * 2;
-    }
-
-    return angle;
-}
-
-let velocityX = 2;
-let velocityY = -2;
-let facingAngle = Math.atan2(velocityY, velocityX);
-function PhysicsStep()
-{
-    const speed = 0.05;
-    const mult = fixedDelta * speed;
-    for (const cube of cubes)
-    {
-        let dirX = cube.position.x - circle.position.x;
-        let dirY = cube.position.y - circle.position.y;
-
-        // TODO?: use planet radius here
-        let distanceSq = Math.max(0.001, dirX * dirX + dirY * dirY);
-        // distanceSq = Math.sqrt(distanceSq);
-        const param = 50;
-        let magnitude = param / distanceSq;
-
-
-        velocityX += dirX * magnitude * mult;
-        velocityY += dirY * magnitude * mult;
-    }
-
-    if (keymap[" "])
-    {
-        let x = Math.cos(facingAngle);
-        let y = Math.sin(facingAngle);
-
-        const boost = 400;
-
-        velocityX += x * mult * boost;
-        velocityY += y * mult * boost;
-    }
-
-    velocityX *= 1 - mult * 5;
-    velocityY *= 1 - mult * 5;
-
-    circle.position.x += velocityX * mult;
-    circle.position.y += velocityY * mult;
-
-    let currentAngle = Math.atan2(velocityY, velocityX);
-    let angleDiff = NormalizeAngle(currentAngle - facingAngle);
-
-    const maxAngleDiff = 80 * mult;
-    angleDiff = Clamp(angleDiff, -maxAngleDiff, maxAngleDiff);
-    facingAngle = NormalizeAngle(facingAngle + angleDiff);
-
-    circle.rotation.z = facingAngle * 180 / Math.PI;
-}
-
-window.requestAnimationFrame(Frame);
-
-window.addEventListener("resize", () => scene.render());
-
-
-function TouchClear()
-{
-    keymap["a"] = false;
-    keymap["d"] = false;
-    keymap["w"] = false;
-    keymap["s"] = false;
-}
-
-/**
- * @param {TouchEvent} ev
- */
-function TouchUpdate(ev)
-{
-    if (ev.touches[0].clientX < window.innerWidth / 3)
-    {
-        keymap["a"] = true;
-    }
-    else if (ev.touches[0].clientX > window.innerWidth / 3 * 2)
-    {
-        keymap["d"] = true;
-    }
-
-    if (ev.touches[0].clientY < window.innerHeight / 3)
-    {
-        keymap["w"] = true;
-    }
-    else if (ev.touches[0].clientY > window.innerHeight / 3 * 2)
-    {
-        keymap["s"] = true;
-    }
-}
-
-window.addEventListener("touchstart", ev =>
-{
-    TouchClear();
-    TouchUpdate(ev);
-});
-
-window.addEventListener("touchend", () =>
-{
-    TouchClear();
-});
-
-window.addEventListener("touchmove", ev =>
-{
-    TouchClear();
-    TouchUpdate(ev);
-});
-
-})();

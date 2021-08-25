@@ -1,11 +1,18 @@
 
-/**
- * @param {number} radius
- * @param {number} seed
- */
-function CreatePlanet(radius, seed)
+class CSS3dPlanet extends CSS3dObject
 {
-    let shader = `
+    /**
+     * @param {number} radius
+     * @param {number} seed
+     * @param {[number, number, number][]} colors
+     * @param {number} noiseScale
+     */
+    constructor(radius, seed, colors, noiseScale)
+    {
+        super();
+        this.radius = radius;
+
+        let shader = `
 
 vec3 hash3(vec3 p)
 {
@@ -51,7 +58,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec3 seed = vec3(${NumberToWebGL(seed)});
 
     float currentPlanetDistance = distance(planetPosition, uv);
-    vec3 originalPlanetColor = vec3(1.0, 0.7, 0.5);
+    vec3 originalPlanetColor = vec3(${NumberToWebGL(colors[0][0])}, ${NumberToWebGL(colors[0][1])}, ${NumberToWebGL(colors[0][2])});
 
     vec2 planetDir = (uv - planetPosition) / planetRadius;
     float len = clamp(length(planetDir), 0.0, 1.0);
@@ -61,17 +68,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec3 planetNoise = vec3(0.0);
 
     float mul = 1.0;
-    float scale = planetRadius * 50.0;
+    float scale = planetRadius * 50.0 * ${NumberToWebGL(noiseScale)};
     float mulmul = 2.5;
-    planetNoise += (simplex_noise(seed + normal * mul * scale)) / mul;
-    mul *= mulmul;
-    planetNoise += (simplex_noise(seed + normal * mul * scale)) / mul;
-    mul *= mulmul;
-    planetNoise += (simplex_noise(seed + normal * mul * scale)) / mul;
+    ${
+        colors.map(c => `
 
-    planetNoise = smoothstep(-1.5, 1.5, planetNoise);
+    planetNoise += smoothstep(-1.2, 1.6, simplex_noise(seed + normal * mul * scale)) / mul * vec3(${c[0]}, ${c[1]}, ${c[2]});
+    mul *= mulmul;
 
-    vec3 planetColor = originalPlanetColor * planetNoise;
+        `).join("\n")
+    }
+
+    vec3 planetColor = planetNoise;
     float side = smoothstep(0.0, 1.0, (currentPlanetDistance - planetRadius) * 1000.0);
     planetColor *= mix(0.2, 1.0, pow(dot(normal, vec3(0.0, 0.0, 1.0)), 2.0));
 
@@ -80,25 +88,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     rgb = mix(planetColor, rgb, smoothstep(0.0, 1.0, (currentPlanetDistance - planetRadius) * 1000.0));
     fragColor = vec4(rgb, glowIntensity);
 }
-    `;
+        `;
 
-    const c = new WebGLCanvas(shader, []);
+        const c = new WebGLCanvas(shader, []);
 
-    function Update()
-    {
-        const size = window.innerHeight * radius * 4;
-        c.resize(size, size);
-        c.render();
+        function Update()
+        {
+            const size = window.innerHeight * radius * 4;
+            c.resize(size, size);
+            c.render();
+        }
+
+        this.element.appendChild(c.canvas);
+        c.canvas.style.transform = "translate(-50%, -50%)";
+
+        Update();
+        window.addEventListener("resize", Update);
     }
-
-    // document.body.appendChild(c.canvas);
-    c.canvas.style.position = "unset";
-
-    Update();
-    window.addEventListener("resize", Update);
 }
-
-// CreatePlanet(0.02, 0);
-// CreatePlanet(0.04, 0);
-// CreatePlanet(0.08, 0);
-// CreatePlanet(0.16, 0);

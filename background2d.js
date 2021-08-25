@@ -48,6 +48,7 @@ function CreateBackground(shader)
 {
     const c = new WebGLCanvas(shader, ["offset", "numBlackHoles", "blackHoleData"]);
     document.body.appendChild(c.canvas);
+    c.canvas.style.position = "absolute";
 
     c.ctx.uniform1i(c.uniformLocations["numBlackHoles"], 3);
 
@@ -69,7 +70,7 @@ function CreateBackground(shader)
 
         if (prevPosX === posX && prevPosY === posY && !keymap["q"])
         {
-            return;
+            // return;
         }
 
         prevPosX = posX;
@@ -92,7 +93,7 @@ function CreateBackground(shader)
         c.render();
     }
 
-    // Draw();
+    Draw();
 }
 
 CreateBackground(`
