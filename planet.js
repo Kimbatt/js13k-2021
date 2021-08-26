@@ -9,7 +9,7 @@ class CSS3dPlanet extends CSS3dObject
      */
     constructor(radius, seed, colors, noiseScale)
     {
-        super();
+        super(false);
         this.radius = radius;
 
         let shader = `
@@ -92,17 +92,27 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
         const c = new WebGLCanvas(shader, []);
 
-        function Update()
+        this.shouldRender = true;
+        this.renderIfNeeded = () =>
         {
-            const size = window.innerHeight * radius * 4;
-            c.resize(size, size);
-            c.render();
-        }
+            if (this.shouldRender)
+            {
+                this.shouldRender = false;
+                const size = window.innerHeight * radius * 4;
+                c.resize(size, size);
+                c.render();
+            }
+        };
 
         this.element.appendChild(c.canvas);
         c.canvas.style.transform = "translate(-50%, -50%)";
 
-        Update();
-        window.addEventListener("resize", Update);
+        window.addEventListener("resize", () => this.shouldRender = true);
+    }
+
+    updateTransform()
+    {
+        super.updateTransform();
+        this.renderIfNeeded();
     }
 }

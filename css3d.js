@@ -28,9 +28,9 @@ class CSS3dScene
         this.camera = new CSS3dCamera(this);
 
         /**
-         * @type {CSS3dObject[]}
+         * @type {Set<CSS3dObject>}
          */
-        this.objects = [];
+        this.objects = new Set();
 
         this.element = document.createElement("div");
         document.body.appendChild(this.element);
@@ -42,8 +42,17 @@ class CSS3dScene
      */
     add(obj)
     {
-        this.objects.push(obj);
+        this.objects.add(obj);
         this.element.appendChild(obj.element);
+    }
+
+    /**
+     * @param {CSS3dObject} obj
+     */
+    remove(obj)
+    {
+        this.objects.delete(obj);
+        this.element.removeChild(obj.element);
     }
 
     render()
@@ -58,10 +67,10 @@ class CSS3dScene
 
 class CSS3dObject
 {
-    constructor()
+    constructor(updateTransform = true)
     {
         this.element = document.createElement("div");
-        this.element.style.transformOrigin = "50% 50%";
+        // this.element.style.transformOrigin = "50% 50%";
 
         /**
          * @type {(() => void)[]}
@@ -80,7 +89,10 @@ class CSS3dObject
             z: 0
         };
 
-        this.updateTransform();
+        if (updateTransform)
+        {
+            this.updateTransform();
+        }
     }
 
     updateTransform()

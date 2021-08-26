@@ -4,6 +4,28 @@
 let scene = new CSS3dScene();
 let camera = scene.camera;
 
+let particleTemplate = document.createElement("div");
+particleTemplate.style.background = "red";
+particleTemplate.style.borderRadius = "50%";
+let particesystem = new ParticleSystem(scene, particleTemplate, particle =>
+{
+    let velocityX = 0.1;
+    let velocityY = 0;
+    particle.sizeX = 0.05;
+    particle.sizeY = 0.05;
+
+    return (delta) =>
+    {
+        particle.position.x += delta * velocityX;
+        particle.position.y += delta * velocityY;
+
+        particle.element.style.opacity = Math.sin(particle.age * Math.PI);
+        particle.alive = particle.age < 1.0;
+    };
+});
+
+particesystem.particlesPerSecond = 5;
+
 /**
  * @type {CSS3dPlanet[]}
  */
@@ -54,6 +76,8 @@ function Frame(time)
     time /= 1000;
     let delta = time - lastTime;
     lastTime = time;
+    delta = Math.min(delta, 1.0); // maximum 1 second of frame time
+
     accumulatedTime += delta;
     window.requestAnimationFrame(Frame);
 
@@ -75,6 +99,7 @@ function Frame(time)
     {
         accumulatedTime -= fixedDelta;
         PhysicsStep();
+        particesystem.update(fixedDelta);
     }
 
     scene.render();
