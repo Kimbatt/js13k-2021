@@ -9,22 +9,30 @@ particleTemplate.style.background = "red";
 particleTemplate.style.borderRadius = "50%";
 let particesystem = new ParticleSystem(scene, particleTemplate, particle =>
 {
-    let velocityX = 0.1;
-    let velocityY = 0;
+    let maxAge = 0.5;
+    let age = () => particle.age / maxAge;
+
+    let angle = Math.random() * Math.PI * 2;
     particle.sizeX = 0.05;
     particle.sizeY = 0.05;
 
     return (delta) =>
     {
+        let speed = 0.5 * falloff.easeOut(age());
+        let velocityX = Math.cos(angle) * speed;
+        let velocityY = Math.sin(angle) * speed;
+
         particle.position.x += delta * velocityX;
         particle.position.y += delta * velocityY;
 
-        particle.element.style.opacity = Math.sin(particle.age * Math.PI);
-        particle.alive = particle.age < 1.0;
+        particle.element.style.opacity = falloff.easeOut(1.0 - age());
+        particle.alive = age() < 1.0;
     };
 });
 
-particesystem.particlesPerSecond = 5;
+// particesystem.particlesPerSecond = 50;
+particesystem.particlesToCreate = 20;
+
 
 /**
  * @type {CSS3dPlanet[]}
