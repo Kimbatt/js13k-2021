@@ -43,8 +43,12 @@ function Init()
     let rng = mulberry32(0);
     noiseBuffer = CreateBufferWithData(actx, 1, () => rng() * 2 - 1);
 
-    let coeffs = [0, 1, 0.4, 0.2, 0.3, 0.1];
-    bassWave = actx.createPeriodicWave(coeffs, [0, 1, 0, 0.2, 0.5, 0.2]);
+    // let coeffs = [0, 1, 0.4, 0.2, 0.3, 0.1];
+    // bassWave = actx.createPeriodicWave(coeffs, [0, 1, 0, 0.2, 0.5, 0.2]);
+    bassWave = actx.createPeriodicWave(
+        [0, 0, 0, 0.1, -0.4, 0, 1, 0, -0.9, 0.1, 0.4, -0.1, 0, 0.2, -0.1, 0.1, 0, 0, 0.1, 0.1, 0, 0, 0, 0, 0, 0.1, 0.2, -0.2, -0.3, 0.1, 0.1, -0.2, 0, 0, 0.1, 0, -0.1, -0.4, 0.2, 0.4, 0.1, 0.3, 0.3, 0, 0, -0.2, 0.1, -0.1, -0.1, -0.3, 0.1, -0.1, 0, 0, 0.1, 0.1, 0, 0.1, 0.1, -0.2, 0, -0.1, -0.1, 0, 0, -0.1, -0.2, 0, 0.1, 0, -0.1, 0.1, -0.1, 0, 0, -0.1, -0.1, 0, -0.1, -0.1, -0.1],
+        [0, 0, 0, -0.1, 0.2, 0, -0.3, 0.1, -0.5, -0.8, 0, 0, -0.4, 0, -0.3, -0.1, 0, 0, 0, 0, 0.1, 0.1, 0, -0.1, 0, 0.1, -0.4, 0.1, -0.1, -0.2, 0, 0, -0.1, 0, 0.1, -0.2, 0, -0.2, 0, -0.2, 0, 0.4, 0, -0.4, 0.3, 0.1, 0, -0.1, 0.2, -0.1, 0.2, -0.1, -0.2, -0.2, 0.2, 0, -0.2, 0.1, -0.2, -0.2, 0, 0, 0, 0, 0.1, -0.1, -0.1, 0, 0.1, 0, 0, 0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    );
 
     Start();
 }
@@ -190,11 +194,12 @@ function Kick(when)
 {
     let sourceNode = actx.createOscillator();
     let startFreq = 250;
+    let timeOffset = -0.005;
     sourceNode.frequency.value = startFreq;
-    sourceNode.frequency.linearRampToValueAtTime(startFreq, when + 0.01);
-    sourceNode.frequency.linearRampToValueAtTime(50, when + 0.03);
+    sourceNode.frequency.linearRampToValueAtTime(startFreq, when + 0.01 + timeOffset);
+    sourceNode.frequency.linearRampToValueAtTime(50, when + 0.03 + timeOffset);
 
-    Drum(0.6, when, sourceNode, false, 0, 0, 0.01, 0.05, 0.1);
+    Drum(0.6, when + timeOffset, sourceNode, false, 0, 0, 0.01, 0.1, 0.05);
 }
 
 let duration = 4;
@@ -208,9 +213,9 @@ function Start()
     {
         let freq = NoteToFrequency(octave, note);
         let baseVolume = 0.3;
-        PlaySound(freq, baseVolume / 1, when,        duration, 0.01, 0.05, 0.0);
-        // PlaySound(freq, baseVolume / 2, when + 0.25, duration, 0.01, 0.05, 10.0);
-        // PlaySound(freq, baseVolume / 4, when + 0.50, duration, 0.01, 0.05, 20.0);
+        PlaySound(freq, baseVolume / 1, when,        duration, 0.01, 0.05, 0.1);
+        PlaySound(freq, baseVolume / 2, when + 0.25, duration, 0.01, 0.05, 0.5);
+        PlaySound(freq, baseVolume / 4, when + 0.50, duration, 0.01, 0.05, 1);
         // PlaySound(freq, baseVolume / 4, when + 0.50, duration, 0.01, 0.1, 0.8);
         // PlaySound(freq, baseVolume / 8, when + 0.75, duration, 0.01, 0.1, 2);
     }
@@ -272,15 +277,15 @@ function Start()
 
             if (scheduledCount % 2 === 0)
             {
-                if (!kickActive || rng() < 0.2)
+                if (!kickActive || rng() < 0.1)
                 {
                     kickActive = !kickActive;
                 }
-                else if (!snareActive || rng() < 0.2)
+                else if (!snareActive || rng() < 0.1)
                 {
                     snareActive = !snareActive;
                 }
-                else if (!hatActive || rng() < 0.2)
+                else if (!hatActive || rng() < 0.1)
                 {
                     hatActive = !hatActive;
                 }
@@ -309,7 +314,7 @@ function Start()
 
             const tones = [0, 2, 4, 7, 9];
             // const tones = [4, 5, 9, 11, 12];
-            const randomTone = () => tones[noteRng() * tones.length | 0] + 3;
+            const randomTone = () => tones[noteRng() * tones.length | 0] - 5;
 
             for (let i = 0; i < 8; ++i)
             {
@@ -324,7 +329,7 @@ function Start()
                 }
             }
 
-            // let noteOffset = 5;
+            // let noteOffset = -5;
             // let empty = Symbol();
             // let timer = 0;
             // function Play(note, sixteenths = 1)

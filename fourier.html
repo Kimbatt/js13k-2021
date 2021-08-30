@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="utf-8">
+<title>fourier</title>
+
+<style>
+
+body
+{
+    background: #323639;
+    color: white;
+}
+
+</style>
+</head>
+<body>
+
+    <input type="file" accept="audio/*" onclick="this.value=null" onchange="FileSelected(this.files[0])">
+    <br>
+    <label>Preview frequency <input id="preview-frequency" type="range" min="0" max="4" value="1" step="0.01"></label>
+    <br>
+    <label>Preview volume <input id="preview-volume" type="range" min="0" max="1" value="0.1" step="0.01"></label>
+    <br>
+    <label>Loopen <input id="loopen" type="checkbox"></label>
+    <label>Period <input id="period" type="number" min="1" value="1"></label>
+    <br>
+    <label>Output max length <input id="max-length" type="number" min="2" step="1" value="100"></label>
+    <br>
+    <label>Output decimals <input id="decimals" type="number" min="1" step="1" value="2"></label>
+    <br>
+    <button onclick="Play()">Play</button>
+    <br>
+    <div>Real</div>
+    <textarea id="real" style="width: 400px; height: 100px;"></textarea>
+    <br>
+    <div>Imaginary</div>
+    <textarea id="imag" style="width: 400px; height: 100px;"></textarea>
+
+<script src="fourier.js"></script>
+</body>
+</html>
