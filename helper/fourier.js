@@ -1,4 +1,25 @@
 
+/// <reference path="dat.gui/dat.gui.d.ts" />
+const gui = new dat.GUI({ autoPlace: false, width: 500 });
+document.getElementById("datgui-container").appendChild(gui.domElement);
+
+const guiParams = {
+    volume: 0.1,
+    frequency: 1,
+    loopen: false,
+    loopenPercentage: 0.1,
+    maxLength: 100,
+    decimals: 2
+};
+
+gui.add(guiParams, "volume", 0, 1).name("Preview volume");
+gui.add(guiParams, "frequency", 0, 4).name("Preview frequency");
+gui.add(guiParams, "loopen").name("Loopen");
+gui.add(guiParams, "loopenPercentage", 0, 1).name("Loopen percentage");
+gui.add(guiParams, "maxLength", 0, undefined, 1).name("Max output length");
+gui.add(guiParams, "decimals", 0, 10, 1).name("Output decimals");
+
+
 class Complex
 {
     /**
@@ -184,14 +205,15 @@ function Play()
     }
 
     let currentSamples;
-    if (document.getElementById("loopen").checked)
+    if (guiParams.loopen)
     {
-        currentSamples = new Array(samples.length);
-        const period = +document.getElementById("period").value;
-        // TODO
-        for (let i = 0; i < currentSamples.length; ++i)
+        currentSamples = samples.slice();
+        const len = currentSamples.length *  guiParams.loopenPercentage | 0;
+        const startIndex = currentSamples.length - 1 - len;
+
+        for (let i = startIndex; i < currentSamples.length; ++i)
         {
-            currentSamples[i] = Lerp(samples[i], samples[samples.length - 1 - i], );
+            currentSamples[i] = Lerp(samples[i], samples[samples.length - 1], (i - startIndex) / len);
         }
     }
     else
@@ -209,7 +231,7 @@ function Play()
         fft[i].imag *= invMagnitude;
     }
 
-    const count = Math.min(+document.getElementById("max-length").value, fft.length);
+    const count = Math.min(guiParams.maxLength, fft.length);
     /** @type {number[]} */
     let real = new Array(count);
     /** @type {number[]} */
@@ -230,7 +252,7 @@ function Play()
         }
     }
 
-    const decimalsMultiplier = 10 ** (+document.getElementById("decimals").value);
+    const decimalsMultiplier = 10 ** guiParams.decimals;
     for (let i = 0; i < count; ++i)
     {
         real[i] /= maxMagnitude;
@@ -266,13 +288,13 @@ function Play()
     const wave = actx.createPeriodicWave(eval(rs), eval(is));
 
     const oscillator = actx.createOscillator();
-    oscillator.frequency.value = 1 / duration * (+document.getElementById("preview-frequency").value);
+    oscillator.frequency.value = guiParams.frequency / duration;
     oscillator.setPeriodicWave(wave);
     oscillator.start();
     oscillator.stop(actx.currentTime + 1);
 
     const gainNode = actx.createGain();
-    gainNode.gain.value = +document.getElementById("preview-volume").value;
+    gainNode.gain.value = guiParams.volume;
 
     oscillator.connect(gainNode);
     gainNode.connect(actx.destination);
