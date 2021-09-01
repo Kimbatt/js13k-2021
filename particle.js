@@ -4,8 +4,9 @@ class Particle extends CSS3dObject
     /**
      * @param {HTMLElement} element
      * @param {(p: Particle) => ((delta: number) => void)} setUpDate
+     * @param {userData} any
      */
-    constructor(element, setUpDate)
+    constructor(element, setUpDate, userData)
     {
         super();
 
@@ -16,6 +17,7 @@ class Particle extends CSS3dObject
         this.age = 0;
         this.sizeX = 1;
         this.sizeY = 1;
+        this.userData = userData;
         this.update = setUpDate(this);
 
         this.styleUpdaterFunctions.push(() =>
@@ -50,11 +52,11 @@ class ParticleSystem
         this.setUpDate = setUpDate;
     }
 
-    createParticles(count = 1)
+    createParticles(count = 1, userData = null)
     {
         for (let i = 0; i < count; ++i)
         {
-            let particle = new Particle(this.particleTemplate.cloneNode(true), this.setUpDate);
+            let particle = new Particle(this.particleTemplate.cloneNode(true), this.setUpDate, userData);
             this.scene.add(particle);
             this.particles.add(particle);
         }

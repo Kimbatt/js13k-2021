@@ -1,38 +1,49 @@
 
-(() =>
-{
 let scene = new CSS3dScene();
 let camera = scene.camera;
 
-let particleTemplate = document.createElement("div");
-particleTemplate.style.background = "red";
-particleTemplate.style.borderRadius = "50%";
-let particesystem = new ParticleSystem(scene, particleTemplate, particle =>
+(() =>
 {
-    let maxAge = 0.5;
-    let age = () => particle.age / maxAge;
+
+let particleTemplate = document.createElement("div");
+particleTemplate.style.borderRadius = "50%";
+particleTemplate.style.background = "radial-gradient(#ff6, #f52 30%, #0006 50%, #0000 80%)";
+
+let particleSystem = new ParticleSystem(scene, particleTemplate, particle =>
+{
+    particle.element.style.filter = `brightness(${Math.random() + 0.5})`; //`hue-rotate(${Math.random()-0.5}rad)`;
+
+    let maxAge = Math.random() * 0.5 + 0.5;
+    let age = () => particle.age / maxAge; // percentage [0, 1]
 
     let angle = Math.random() * Math.PI * 2;
-    particle.sizeX = 0.05;
-    particle.sizeY = 0.05;
+    particle.sizeX = 0.03;
+    particle.sizeY = 0.03;
+    let speed = Math.random() * 0.1 + 0.2;
+
+    particle.position.x = particle.userData.x;
+    particle.position.y = particle.userData.y;
 
     return (delta) =>
     {
-        let speed = 0.5 * falloff.easeOut(age());
-        let velocityX = Math.cos(angle) * speed;
-        let velocityY = Math.sin(angle) * speed;
+        let currentSpeed = speed * (1 - falloff.easeOutPoly(age(), 2));
+        let velocityX = Math.cos(angle) * currentSpeed;
+        let velocityY = Math.sin(angle) * currentSpeed;
 
         particle.position.x += delta * velocityX;
         particle.position.y += delta * velocityY;
 
-        particle.element.style.opacity = falloff.easeOut(1.0 - age());
+        particle.element.style.opacity = falloff.easeOut(1 - age()) / 2;
         particle.alive = age() < 1.0;
     };
 });
 
-// particesystem.particlesPerSecond = 50;
-particesystem.particlesToCreate = 20;
+function CreateExplosion(x, y)
+{
+    particleSystem.createParticles(20, { x, y });
+}
 
+window.CreateExplosion = CreateExplosion;
 
 /**
  * @type {CSS3dPlanet[]}
@@ -65,6 +76,7 @@ function CreatePlanet(px, py, planet)
 CreatePlanet(0, 0, new CSS3dPlanet(0.05, 0, [color0, color1, color2, color3], 1));
 CreatePlanet(0.5, 0, new CSS3dPlanet(0.08, 0, [color1, color1, color1, color1], 1));
 CreatePlanet(1, 0, new CSS3dPlanet(0.05, 0, [color2, color1, color0, color3], 1));
+// CreatePlanet(5, 0, new CSS3dPlanet(0.5, 0, [color2, color1, color0, color3], 1));
 
 let circle = new CSS3dCircle(0.05);
 scene.add(circle);
@@ -89,38 +101,35 @@ function Frame(time)
     accumulatedTime += delta;
     window.requestAnimationFrame(Frame);
 
-    const speed = 0.1;
+    // const speed = 0.1;
 
-    const multiplier = speed * delta * 4;
-    let x = 0;
-    let y = 0;
+    // const multiplier = speed * delta * 4;
+    // let x = 0;
+    // let y = 0;
 
-    if (keymap["a"]) x -= 1;
-    if (keymap["d"]) x += 1;
-    if (keymap["w"]) y += 1;
-    if (keymap["s"]) y -= 1;
+    // if (keymap["a"]) x -= 1;
+    // if (keymap["d"]) x += 1;
+    // if (keymap["w"]) y += 1;
+    // if (keymap["s"]) y -= 1;
 
-    camera.position.x += x * multiplier;
-    camera.position.y += y * multiplier;
+    // camera.position.x += x * multiplier;
+    // camera.position.y += y * multiplier;
+
+    const maxDistance = 1.5;
+
+    let tx = Clamp(Math.abs(camera.position.x - circle.position.x), 0, maxDistance) / maxDistance;
+    let ty = Clamp(Math.abs(camera.position.y - circle.position.y), 0, maxDistance) / maxDistance;
+    camera.position.x = Lerp(camera.position.x, circle.position.x, falloff.easeInPoly(tx, 2));
+    camera.position.y = Lerp(camera.position.y, circle.position.y, falloff.easeInPoly(ty, 2));
 
     while (accumulatedTime > 0)
     {
         accumulatedTime -= fixedDelta;
         PhysicsStep();
-        particesystem.update(fixedDelta);
+        particleSystem.update(fixedDelta);
     }
 
     scene.render();
-}
-
-/**
- * @param {number} x
- * @param {number} min
- * @param {number} max
- */
-function Clamp(x, min, max)
-{
-    return x < min ? min : x > max ? max : x;
 }
 
 /**
@@ -146,6 +155,8 @@ let velocityY = -2;
 let facingAngle = Math.atan2(velocityY, velocityX);
 function PhysicsStep()
 {
+    const scaleMultiplier = 1;
+
     const speed = 0.02;
     const mult = fixedDelta * speed;
     for (const planet of planets)
@@ -154,12 +165,18 @@ function PhysicsStep()
         let dirY = planet.position.y - circle.position.y;
 
         // let radius = planet.radius * 4;
-        let distanceSq = Math.max(0.001, dirX * dirX + dirY * dirY);
+        let distanceSq = Math.max(0.001, dirX * dirX * scaleMultiplier + dirY * dirY * scaleMultiplier);
 
         // real gravity, based on volume, but just using the same mass for all planets seems to be better
-        //const volume = 4 / 3 * Math.PI * radius * radius * radius;
-        //const mass = 500 * volume;
+        // const volume = 4 / 3 * Math.PI * radius * radius * radius;
+        // const mass = 500 * volume;
+
+        // fixed mass
         const mass = 80;
+
+        // just use the radius
+        // const mass = planet.radius * 200;
+
         let magnitude = mass / distanceSq;
 
 
@@ -172,10 +189,16 @@ function PhysicsStep()
         let x = Math.cos(facingAngle);
         let y = Math.sin(facingAngle);
 
-        const boost = 500;
+        // TODO: accelerate faster up until reaching a certain speed, instead of jumping to a minimum speed
+        const boost = 10;
+        const minBoostSpeed = 10;
 
-        velocityX += x * mult * boost;
-        velocityY += y * mult * boost;
+        let minBoostVelocityX = x * minBoostSpeed;
+        let minBoostVelocityY = y * minBoostSpeed;
+        let normalVelocityX = velocityX + x * fixedDelta * boost;
+        let normalVelocityY = velocityY + y * fixedDelta * boost;
+        velocityX = Math.abs(minBoostVelocityX) > Math.abs(normalVelocityX) ? minBoostVelocityX : normalVelocityX;
+        velocityY = Math.abs(minBoostVelocityY) > Math.abs(normalVelocityY) ? minBoostVelocityY : normalVelocityY
     }
 
     velocityX *= 1 - mult * 5;

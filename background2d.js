@@ -50,7 +50,7 @@ function CreateBackground(shader)
     document.body.appendChild(c.canvas);
     c.canvas.style.position = "absolute";
 
-    c.ctx.uniform1i(c.uniformLocations["numBlackHoles"], 3);
+    c.ctx.uniform1i(c.uniformLocations["numBlackHoles"], 0);
 
     function Resize()
     {
@@ -79,7 +79,7 @@ function CreateBackground(shader)
 
         const time = performance.now() * 0.001;
 
-        c.ctx.uniform2f(c.uniformLocations["offset"], posX, posY);
+        c.ctx.uniform2f(c.uniformLocations["offset"], camera.position.x / 4, camera.position.y / 4);
 
 
         // black holes
