@@ -8,10 +8,10 @@
  */
 function CreateBackground(shader)
 {
-    const c = new WebGLCanvas(shader, ["offset", "numBlackHoles", "blackHoleData"]);
+    const c = new WebGLCanvas(shader, "offset", "numBlackHoles", "blackHoleData");
     document.body.appendChild(c.canvas);
     c.canvas.style.position = "absolute";
-    c.canvas.style.zIndex = "-1";
+    c.canvas.style.zIndex = "-3";
 
     c.ctx.uniform1i(c.uniformLocations["numBlackHoles"], 0);
 

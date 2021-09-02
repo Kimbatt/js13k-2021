@@ -1,4 +1,39 @@
 
+var webglNoiseFunction = `
+vec3 hash3(vec3 p)
+{
+    p = vec3(
+        dot(p,vec3(127.1, 311.7, 74.7)),
+        dot(p,vec3(269.5, 183.3, 246.1)),
+        dot(p,vec3(113.5, 271.9, 124.6))
+    );
+
+    return 2.0 * fract(sin(p) * 43758.5453123) - 1.0;
+}
+
+float simplex_noise(vec3 p)
+{
+    const float K1 = 1.0 / 3.0;
+    const float K2 = 1.0 / 6.0;
+
+    vec3 i = floor(p + (p.x + p.y + p.z) * K1);
+    vec3 d0 = p - (i - (i.x + i.y + i.z) * K2);
+
+    vec3 e = step(vec3(0.0), d0 - d0.yzx);
+    vec3 i1 = e * (1.0 - e.zxy);
+    vec3 i2 = 1.0 - e.zxy * (1.0 - e);
+
+    vec3 d1 = d0 - (i1 - 1.0 * K2);
+    vec3 d2 = d0 - (i2 - 2.0 * K2);
+    vec3 d3 = d0 - (1.0 - 3.0 * K2);
+
+    vec4 h = max(0.6 - vec4(dot(d0, d0), dot(d1, d1), dot(d2, d2), dot(d3, d3)), 0.0);
+    vec4 n = h * h * h * h * vec4(dot(d0, hash3(i)), dot(d1, hash3(i + i1)), dot(d2, hash3(i + i2)), dot(d3, hash3(i + 1.0)));
+
+    return dot(vec4(31.316), n);
+}
+`;
+
 /**
  * @param {number} num
  */
@@ -13,7 +48,7 @@ class WebGLCanvas
      * @param {string} shader
      * @param {string[]} uniforms
      */
-    constructor(shader, uniforms)
+    constructor(shader, ...uniforms)
     {
         // shaders
         uniforms.push("uTime", "uScreenSize", "uAspect");

@@ -10,41 +10,18 @@ class CSS3dPlanet extends CSS3dObject
     constructor(radius, seed, colors, noiseScale)
     {
         super(false);
+        this.element.style.zIndex = "-1";
         this.radius = radius;
 
         let shader = `
 
-vec3 hash3(vec3 p)
+${webglNoiseFunction}
+
+vec3 hsv2rgb(vec3 c)
 {
-    p = vec3(
-        dot(p,vec3(127.1, 311.7, 74.7)),
-        dot(p,vec3(269.5, 183.3, 246.1)),
-        dot(p,vec3(113.5, 271.9, 124.6))
-    );
-
-    return 2.0 * fract(sin(p) * 43758.5453123) - 1.0;
-}
-
-float simplex_noise(vec3 p)
-{
-    const float K1 = 1.0 / 3.0;
-    const float K2 = 1.0 / 6.0;
-
-    vec3 i = floor(p + (p.x + p.y + p.z) * K1);
-    vec3 d0 = p - (i - (i.x + i.y + i.z) * K2);
-
-    vec3 e = step(vec3(0.0), d0 - d0.yzx);
-    vec3 i1 = e * (1.0 - e.zxy);
-    vec3 i2 = 1.0 - e.zxy * (1.0 - e);
-
-    vec3 d1 = d0 - (i1 - 1.0 * K2);
-    vec3 d2 = d0 - (i2 - 2.0 * K2);
-    vec3 d3 = d0 - (1.0 - 3.0 * K2);
-
-    vec4 h = max(0.6 - vec4(dot(d0, d0), dot(d1, d1), dot(d2, d2), dot(d3, d3)), 0.0);
-    vec4 n = h * h * h * h * vec4(dot(d0, hash3(i)), dot(d1, hash3(i + i1)), dot(d2, hash3(i + i2)), dot(d3, hash3(i + 1.0)));
-
-    return dot(vec4(31.316), n);
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
@@ -58,7 +35,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec3 seed = vec3(${NumberToWebGL(seed)});
 
     float currentPlanetDistance = distance(planetPosition, uv);
-    vec3 originalPlanetColor = vec3(${NumberToWebGL(colors[0][0])}, ${NumberToWebGL(colors[0][1])}, ${NumberToWebGL(colors[0][2])});
+    vec3 originalPlanetColor = hsv2rgb(vec3(${NumberToWebGL(colors[0][0])}, ${NumberToWebGL(colors[0][1])}, ${NumberToWebGL(colors[0][2])}));
 
     vec2 planetDir = (uv - planetPosition) / planetRadius;
     float len = clamp(length(planetDir), 0.0, 1.0);
@@ -73,7 +50,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     ${
         colors.map(c => `
 
-    planetNoise += smoothstep(-1.2, 1.6, simplex_noise(seed + normal * mul * scale)) / mul * vec3(${c[0]}, ${c[1]}, ${c[2]});
+    planetNoise += smoothstep(-1.2, 1.6, simplex_noise(seed + normal * mul * scale)) / mul * hsv2rgb(vec3(${NumberToWebGL(c[0])}, ${NumberToWebGL(c[1])}, ${NumberToWebGL(c[2])}));
     mul *= mulmul;
 
         `).join("\n")
@@ -90,7 +67,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 }
         `;
 
-        const c = new WebGLCanvas(shader, []);
+        const c = new WebGLCanvas(shader);
 
         this.shouldRender = true;
         this.renderIfNeeded = () =>

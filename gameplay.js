@@ -65,10 +65,17 @@ window.CreateExplosion = CreateExplosion;
  */
 let planets = [];
 
-const color0 = [1.0, 0.7, 0.5];
-const color1 = [1.0, 1.0, 1.0];
-const color2 = [0.2, 0.7, 0.8];
-const color3 = [0.5, 0.7, 0.0];
+let planetColorRng = mulberry32(0);
+function RandomPlanetColorHsv()
+{
+    return [planetColorRng(), planetColorRng(), planetColorRng() * 0.5 + 0.5];
+}
+
+
+// const color0 = [1.0, 0.7, 0.5];
+// const color1 = [1.0, 1.0, 1.0];
+// const color2 = [0.2, 0.7, 0.8];
+// const color3 = [0.5, 0.7, 0.0];
 
 // CreatePlanet(0.02, 0, [color0, color1, color2, color3], 1);
 // CreatePlanet(0.04, 0, [color1, color2, color3, color0], 1);
@@ -88,9 +95,9 @@ function CreatePlanet(px, py, planet)
     planets.push(planet);
 }
 
-CreatePlanet(0, 0, new CSS3dPlanet(0.1, 0, [color0, color1, color2, color3], 1));
-CreatePlanet(0.5, 0, new CSS3dPlanet(0.16, 0, [color1, color1, color1, color1], 1));
-CreatePlanet(1, 0, new CSS3dPlanet(0.1, 0, [color2, color1, color0, color3], 1));
+CreatePlanet(0, 0, new CSS3dPlanet(0.1, 0, [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()], 1));
+CreatePlanet(0.5, 0, new CSS3dPlanet(0.16, 0, [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()], 1));
+CreatePlanet(1, 0, new CSS3dPlanet(0.1, 0, [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()], 1));
 // CreatePlanet(5, 0, new CSS3dPlanet(0.5, 0, [color2, color1, color0, color3], 1));
 
 let dead = false;
@@ -128,7 +135,7 @@ function Frame(time)
     time /= 1000;
     let delta = time - lastTime;
     lastTime = time;
-    delta = Math.min(delta, 1.0); // maximum 1 second of frame time
+    delta = Math.min(delta, 0.1); // maximum 0.1 second of frame time
 
     accumulatedTime += delta;
     window.requestAnimationFrame(Frame);
@@ -175,16 +182,22 @@ function NormalizeAngle(angle)
 let velocityX = 2;
 let velocityY = -2;
 let facingAngle = Math.atan2(velocityY, velocityX);
+
+let cpx = camera.position.x;
+let cpy = camera.position.y;
 function PhysicsStep()
 {
     // camera
     {
         const maxDistance = 1.5;
 
-        let tx = Clamp(Math.abs(camera.position.x - circle.position.x), 0, maxDistance) / maxDistance;
-        let ty = Clamp(Math.abs(camera.position.y - circle.position.y), 0, maxDistance) / maxDistance;
-        camera.position.x = Lerp(camera.position.x, circle.position.x, falloff.easeInPoly(tx, 2));
-        camera.position.y = Lerp(camera.position.y, circle.position.y, falloff.easeInPoly(ty, 2));
+        let tx = Clamp(Math.abs(cpx - circle.position.x), 0, maxDistance) / maxDistance;
+        let ty = Clamp(Math.abs(cpy - circle.position.y), 0, maxDistance) / maxDistance;
+        cpx = Lerp(cpx, circle.position.x, falloff.easeInPoly(tx, 2));
+        cpy = Lerp(cpy, circle.position.y, falloff.easeInPoly(ty, 2));
+
+        camera.position.x = cpx;
+        camera.position.y = cpy;
     }
 
     if (dead)
@@ -229,8 +242,8 @@ function PhysicsStep()
                 circle.position.x = -0.3;
                 circle.position.y = -0.3;
 
-                camera.position.x = circle.position.x;
-                camera.position.y = circle.position.y;
+                cpx = circle.position.x;
+                cpy = circle.position.y;
 
                 velocityX = 2;
                 velocityY = -2;
