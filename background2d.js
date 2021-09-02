@@ -1,44 +1,6 @@
 
-/**
- * @type { {[key: string]: boolean} }
- */
-let keymap = {};
-
-window.addEventListener("keydown", ev =>
-{
-    keymap[ev.key] = true;
-});
-
-window.addEventListener("keyup", ev =>
-{
-    keymap[ev.key] = false;
-});
-
 (() =>
 {
-let posX = 0;
-let posY = 0;
-let lastTime = 0;
-function UpdatePosition()
-{
-    let currentTime = performance.now() * 0.001;
-    let delta = currentTime - lastTime;
-    lastTime = currentTime;
-
-    const speed = 0.1;
-
-    let multiplier = speed * delta;
-    let x = 0;
-    let y = 0;
-
-    if (keymap["a"]) x -= 1;
-    if (keymap["d"]) x += 1;
-    if (keymap["w"]) y += 1;
-    if (keymap["s"]) y -= 1;
-
-    posX += x * multiplier;
-    posY += y * multiplier;
-}
 
 /**
  * @param {string} shader
@@ -49,6 +11,7 @@ function CreateBackground(shader)
     const c = new WebGLCanvas(shader, ["offset", "numBlackHoles", "blackHoleData"]);
     document.body.appendChild(c.canvas);
     c.canvas.style.position = "absolute";
+    c.canvas.style.zIndex = "-1";
 
     c.ctx.uniform1i(c.uniformLocations["numBlackHoles"], 0);
 
@@ -60,27 +23,12 @@ function CreateBackground(shader)
     Resize();
     window.addEventListener("resize", Resize);
 
-
-    let prevPosX = NaN;
-    let prevPosY = NaN;
     function Draw()
     {
         window.requestAnimationFrame(Draw);
-        UpdatePosition();
-
-        if (prevPosX === posX && prevPosY === posY && !keymap["q"])
-        {
-            // return;
-        }
-
-        prevPosX = posX;
-        prevPosY = posY;
-
 
         const time = performance.now() * 0.001;
-
         c.ctx.uniform2f(c.uniformLocations["offset"], camera.position.x / 4, camera.position.y / 4);
-
 
         // black holes
         c.ctx.uniform4fv(c.uniformLocations["blackHoleData"], [
@@ -88,7 +36,6 @@ function CreateBackground(shader)
             Math.cos(time) * 0.1, Math.sin(time) * 0.1, 0.02, 2e-5,
             -Math.cos(time * 1.1) * 0.07, Math.sin(time * 1.1) * 0.07, 0.02, 2e-5
         ]);
-
 
         c.render();
     }

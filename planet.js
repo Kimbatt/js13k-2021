@@ -50,7 +50,7 @@ float simplex_noise(vec3 p)
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
     const vec2 planetPosition = vec2(0.0, 0.0);
-    const float planetRadius = ${NumberToWebGL(radius)};
+    const float planetRadius = ${NumberToWebGL(radius / 2)};
 
     float glowRadius = -0.001;
     vec2 uv = (fragCoord - 0.5) * (planetRadius - glowRadius * 4.0) * 2.0;
@@ -98,7 +98,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
             if (this.shouldRender)
             {
                 this.shouldRender = false;
-                const size = window.innerHeight * radius * 4;
+                const size = window.innerHeight * radius * 2;
                 c.resize(size, size);
                 c.render();
             }

@@ -1,4 +1,19 @@
 
+/**
+ * @type { {[key: string]: boolean} }
+ */
+ let keymap = {};
+
+ window.addEventListener("keydown", ev =>
+ {
+     keymap[ev.key] = true;
+ });
+
+ window.addEventListener("keyup", ev =>
+ {
+     keymap[ev.key] = false;
+ });
+
 let scene = new CSS3dScene();
 let camera = scene.camera;
 
@@ -40,7 +55,7 @@ let particleSystem = new ParticleSystem(scene, particleTemplate, particle =>
 
 function CreateExplosion(x, y)
 {
-    particleSystem.createParticles(20, { x, y });
+    particleSystem.createParticles(50, { x, y });
 }
 
 window.CreateExplosion = CreateExplosion;
@@ -73,17 +88,34 @@ function CreatePlanet(px, py, planet)
     planets.push(planet);
 }
 
-CreatePlanet(0, 0, new CSS3dPlanet(0.05, 0, [color0, color1, color2, color3], 1));
-CreatePlanet(0.5, 0, new CSS3dPlanet(0.08, 0, [color1, color1, color1, color1], 1));
-CreatePlanet(1, 0, new CSS3dPlanet(0.05, 0, [color2, color1, color0, color3], 1));
+CreatePlanet(0, 0, new CSS3dPlanet(0.1, 0, [color0, color1, color2, color3], 1));
+CreatePlanet(0.5, 0, new CSS3dPlanet(0.16, 0, [color1, color1, color1, color1], 1));
+CreatePlanet(1, 0, new CSS3dPlanet(0.1, 0, [color2, color1, color0, color3], 1));
 // CreatePlanet(5, 0, new CSS3dPlanet(0.5, 0, [color2, color1, color0, color3], 1));
 
+let dead = false;
 let circle = new CSS3dCircle(0.05);
 scene.add(circle);
 
 circle.position.x = -0.3;
 circle.position.y = -0.3;
 
+camera.position.x = circle.position.x;
+camera.position.y = circle.position.y;
+
+/**
+ * @type {[() => void, number][]}
+ */
+let timers = [];
+
+/**
+ * @param {() => void} callback
+ * @param {number} time
+ */
+function SetFixedTimeout(callback, time)
+{
+    timers.push([callback, time])
+}
 
 let lastTime = 0;
 let accumulatedTime = 0;
@@ -101,32 +133,22 @@ function Frame(time)
     accumulatedTime += delta;
     window.requestAnimationFrame(Frame);
 
-    // const speed = 0.1;
-
-    // const multiplier = speed * delta * 4;
-    // let x = 0;
-    // let y = 0;
-
-    // if (keymap["a"]) x -= 1;
-    // if (keymap["d"]) x += 1;
-    // if (keymap["w"]) y += 1;
-    // if (keymap["s"]) y -= 1;
-
-    // camera.position.x += x * multiplier;
-    // camera.position.y += y * multiplier;
-
-    const maxDistance = 1.5;
-
-    let tx = Clamp(Math.abs(camera.position.x - circle.position.x), 0, maxDistance) / maxDistance;
-    let ty = Clamp(Math.abs(camera.position.y - circle.position.y), 0, maxDistance) / maxDistance;
-    camera.position.x = Lerp(camera.position.x, circle.position.x, falloff.easeInPoly(tx, 2));
-    camera.position.y = Lerp(camera.position.y, circle.position.y, falloff.easeInPoly(ty, 2));
-
     while (accumulatedTime > 0)
     {
         accumulatedTime -= fixedDelta;
         PhysicsStep();
         particleSystem.update(fixedDelta);
+
+        for (let i = 0; i < timers.length; ++i)
+        {
+            let currentTimer = timers[i];
+            if ((currentTimer[1] -= fixedDelta) <= 0)
+            {
+                timers.splice(i, 1);
+                --i;
+                currentTimer[0]();
+            }
+        }
     }
 
     scene.render();
@@ -155,7 +177,20 @@ let velocityY = -2;
 let facingAngle = Math.atan2(velocityY, velocityX);
 function PhysicsStep()
 {
-    const scaleMultiplier = 1;
+    // camera
+    {
+        const maxDistance = 1.5;
+
+        let tx = Clamp(Math.abs(camera.position.x - circle.position.x), 0, maxDistance) / maxDistance;
+        let ty = Clamp(Math.abs(camera.position.y - circle.position.y), 0, maxDistance) / maxDistance;
+        camera.position.x = Lerp(camera.position.x, circle.position.x, falloff.easeInPoly(tx, 2));
+        camera.position.y = Lerp(camera.position.y, circle.position.y, falloff.easeInPoly(ty, 2));
+    }
+
+    if (dead)
+    {
+        return;
+    }
 
     const speed = 0.02;
     const mult = fixedDelta * speed;
@@ -165,7 +200,7 @@ function PhysicsStep()
         let dirY = planet.position.y - circle.position.y;
 
         // let radius = planet.radius * 4;
-        let distanceSq = Math.max(0.001, dirX * dirX * scaleMultiplier + dirY * dirY * scaleMultiplier);
+        let distanceSq = dirX * dirX + dirY * dirY;
 
         // real gravity, based on volume, but just using the same mass for all planets seems to be better
         // const volume = 4 / 3 * Math.PI * radius * radius * radius;
@@ -179,6 +214,31 @@ function PhysicsStep()
 
         let magnitude = mass / distanceSq;
 
+        if (Math.sqrt(distanceSq) < planet.radius + circle.radius)
+        {
+            CreateExplosion(circle.position.x, circle.position.y);
+            dead = true;
+            circle.element.style.opacity = 0;
+
+            SetFixedTimeout(() =>
+            {
+                dead = false;
+                circle.element.style.opacity = 1;
+
+                // TODO: make a reset function
+                circle.position.x = -0.3;
+                circle.position.y = -0.3;
+
+                camera.position.x = circle.position.x;
+                camera.position.y = circle.position.y;
+
+                velocityX = 2;
+                velocityY = -2;
+                facingAngle = Math.atan2(velocityY, velocityX);
+            }, 1.5);
+
+            return;
+        }
 
         velocityX += dirX * magnitude * mult;
         velocityY += dirY * magnitude * mult;
@@ -189,20 +249,25 @@ function PhysicsStep()
         let x = Math.cos(facingAngle);
         let y = Math.sin(facingAngle);
 
-        // TODO: accelerate faster up until reaching a certain speed, instead of jumping to a minimum speed
-        const boost = 10;
-        const minBoostSpeed = 10;
+        const boostMaxAcceleration = 500;
+        const normalAcceleration = 15;
+        const minSpeed = 10;
 
-        let minBoostVelocityX = x * minBoostSpeed;
-        let minBoostVelocityY = y * minBoostSpeed;
-        let normalVelocityX = velocityX + x * fixedDelta * boost;
-        let normalVelocityY = velocityY + y * fixedDelta * boost;
-        velocityX = Math.abs(minBoostVelocityX) > Math.abs(normalVelocityX) ? minBoostVelocityX : normalVelocityX;
-        velocityY = Math.abs(minBoostVelocityY) > Math.abs(normalVelocityY) ? minBoostVelocityY : normalVelocityY
+        let speed = Math.hypot(velocityX, velocityY);
+        let acceleration = Lerp(boostMaxAcceleration, normalAcceleration, Clamp(speed / minSpeed, 0, 1));
+
+        velocityX += x * fixedDelta * acceleration;
+        velocityY += y * fixedDelta * acceleration;
     }
 
     velocityX *= 1 - mult * 5;
     velocityY *= 1 - mult * 5;
+
+    const maxSpeed = 25;
+    let currentSpeed = Math.hypot(velocityX, velocityY);
+    let targetSpeed = Math.min(maxSpeed, currentSpeed);
+    velocityX *= targetSpeed / currentSpeed;
+    velocityY *= targetSpeed / currentSpeed;
 
     circle.position.x += velocityX * mult;
     circle.position.y += velocityY * mult;
@@ -220,55 +285,5 @@ function PhysicsStep()
 window.requestAnimationFrame(Frame);
 
 window.addEventListener("resize", () => scene.render());
-
-
-function TouchClear()
-{
-    keymap["a"] = false;
-    keymap["d"] = false;
-    keymap["w"] = false;
-    keymap["s"] = false;
-}
-
-/**
- * @param {TouchEvent} ev
- */
-function TouchUpdate(ev)
-{
-    if (ev.touches[0].clientX < window.innerWidth / 3)
-    {
-        keymap["a"] = true;
-    }
-    else if (ev.touches[0].clientX > window.innerWidth / 3 * 2)
-    {
-        keymap["d"] = true;
-    }
-
-    if (ev.touches[0].clientY < window.innerHeight / 3)
-    {
-        keymap["w"] = true;
-    }
-    else if (ev.touches[0].clientY > window.innerHeight / 3 * 2)
-    {
-        keymap["s"] = true;
-    }
-}
-
-window.addEventListener("touchstart", ev =>
-{
-    TouchClear();
-    TouchUpdate(ev);
-});
-
-window.addEventListener("touchend", () =>
-{
-    TouchClear();
-});
-
-window.addEventListener("touchmove", ev =>
-{
-    TouchClear();
-    TouchUpdate(ev);
-});
 
 })();

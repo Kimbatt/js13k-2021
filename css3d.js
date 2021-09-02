@@ -111,6 +111,7 @@ class CSS3dCircle extends CSS3dObject
     {
         super();
 
+        this.radius = size / 2;
         this.circleElement = document.createElement("div");
         this.circleElement.style.borderRadius = "50%";
         this.circleElement.style.background = "radial-gradient(#0ff, #000)";
@@ -138,8 +139,8 @@ class CSS3dCircle extends CSS3dObject
             this.circleElement.style.width = (size * window.innerHeight) + "px";
             this.circleElement.style.height = (size * window.innerHeight) + "px";
 
-            svg.setAttributeNS(null, "width", `${0.05 * window.innerHeight}px`);
-            svg.setAttributeNS(null, "height", `${0.05 * window.innerHeight}px`);
+            svg.setAttributeNS(null, "width", `${size * window.innerHeight}px`);
+            svg.setAttributeNS(null, "height", `${size * window.innerHeight}px`);
         });
 
         this.element.appendChild(this.circleElement);
