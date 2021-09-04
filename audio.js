@@ -11,6 +11,11 @@ let globalVolumeNode;
 let globalVolume = 0.5;
 
 /**
+ * @type {BiquadFilterNode}
+ */
+let globalFilterNode;
+
+/**
  * @type {AudioBuffer}
  */
 let noiseBuffer;
@@ -20,6 +25,10 @@ let noiseBuffer;
  */
 let soundWave;
 
+/**
+ * @type {GainNode}
+ */
+let boostVolumeNode;
 
 /**
  *
@@ -43,11 +52,21 @@ let once = false;
 function Init()
 {
     if (once)
+    {
         return;
+    }
+
     once = true;
     actx = new AudioContext();
     globalVolumeNode = actx.createGain();
     globalVolumeNode.gain.value = globalVolume;
+
+    globalFilterNode = actx.createBiquadFilter();
+    globalFilterNode.type = "highshelf";
+    globalFilterNode.frequency.value = 200;
+    globalFilterNode.gain.value = 0;
+
+    globalFilterNode.connect(globalVolumeNode);
     globalVolumeNode.connect(actx.destination);
 
     let rng = mulberry32(0);
@@ -57,11 +76,36 @@ function Init()
     // bassWave = actx.createPeriodicWave(coeffs, [0, 1, 0, 0.2, 0.5, 0.2]);
     soundWave = actx.createPeriodicWave(
         // [0, 1, 0, 0.6, 0.3, 0.6],[0, 1, 0, 0.6, 0.3, 0.6]
-        [0, 0, 1, 0.1, -0.4, 0, 1, 0, -0.9, 0.1, 0.4, -0.1, 0, 0.2, -0.1, 0.1, 0, 0, 0.1, 0.1, 0, 0, 0, 0, 0, 0.1, 0.2, -0.2, -0.3, 0.1, 0.1, -0.2, 0, 0, 0.1, 0, -0.1, -0.4, 0.2, 0.4, 0.1, 0.3, 0.3, 0, 0, -0.2, 0.1, -0.1, -0.1, -0.3, 0.1, -0.1, 0, 0, 0.1, 0.1, 0, 0.1, 0.1, -0.2, 0, -0.1, -0.1, 0, 0, -0.1, -0.2, 0, 0.1, 0, -0.1, 0.1, -0.1, 0, 0, -0.1, -0.1, 0, -0.1, -0.1, -0.1],
-        [0, 0, 1, -0.1, 0.2, 0, -0.3, 0.1, -0.5, -0.8, 0, 0, -0.4, 0, -0.3, -0.1, 0, 0, 0, 0, 0.1, 0.1, 0, -0.1, 0, 0.1, -0.4, 0.1, -0.1, -0.2, 0, 0, -0.1, 0, 0.1, -0.2, 0, -0.2, 0, -0.2, 0, 0.4, 0, -0.4, 0.3, 0.1, 0, -0.1, 0.2, -0.1, 0.2, -0.1, -0.2, -0.2, 0.2, 0, -0.2, 0.1, -0.2, -0.2, 0, 0, 0, 0, 0.1, -0.1, -0.1, 0, 0.1, 0, 0, 0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        new Float32Array([0, 0, 1, 0.1, -0.4, 0, 1, 0, -0.9, 0.1, 0.4, -0.1, 0, 0.2, -0.1, 0.1, 0, 0, 0.1, 0.1, 0, 0, 0, 0, 0,
+            0.1, 0.2, -0.2, -0.3, 0.1, 0.1, -0.2, 0, 0, 0.1, 0, -0.1, -0.4, 0.2, 0.4, 0.1, 0.3, 0.3, 0, 0, -0.2, 0.1, -0.1, -0.1,
+            -0.3, 0.1, -0.1, 0, 0, 0.1, 0.1, 0, 0.1, 0.1, -0.2, 0, -0.1, -0.1, 0, 0, -0.1, -0.2, 0, 0.1, 0, -0.1, 0.1, -0.1, 0,
+            0, -0.1, -0.1, 0, -0.1, -0.1, -0.1]),
+        new Float32Array([0, 0, 1, -0.1, 0.2, 0, -0.3, 0.1, -0.5, -0.8, 0, 0, -0.4, 0, -0.3, -0.1, 0, 0, 0, 0, 0.1, 0.1, 0, -0.1,
+            0, 0.1, -0.4, 0.1, -0.1, -0.2, 0, 0, -0.1, 0, 0.1, -0.2, 0, -0.2, 0, -0.2, 0, 0.4, 0, -0.4, 0.3, 0.1, 0, -0.1, 0.2,
+            -0.1, 0.2, -0.1, -0.2, -0.2, 0.2, 0, -0.2, 0.1, -0.2, -0.2, 0, 0, 0, 0, 0.1, -0.1, -0.1, 0, 0.1, 0, 0, 0.1, 0, 0, 0,
+            0, 0, 0, 0, 0, 0])
     );
 
     Start();
+
+    {
+        let boostNoiseNode = CreateNoiseNode();
+        boostVolumeNode = actx.createGain();
+
+        let boostFilterNode = actx.createBiquadFilter();
+
+        boostVolumeNode.gain.value = 0;
+
+        boostFilterNode.type = "bandpass";
+        boostFilterNode.frequency.value = 250;
+        boostFilterNode.Q.value = 5;
+
+        boostNoiseNode.connect(boostFilterNode);
+        boostFilterNode.connect(boostVolumeNode);
+        boostVolumeNode.connect(globalFilterNode);
+
+        boostNoiseNode.start();
+    }
 }
 
 document.addEventListener("click", Init);
@@ -96,6 +140,12 @@ function NoteToFrequency(octave, note)
     return 2 ** (Math.log2(440) + octave - 4 + (note - 9) / 12);
 }
 
+function PlayExplosionSound()
+{
+    PlaySound(50, 0.5, actx.currentTime, 0.1, 0.01, 0.5, 0.5, "square");
+    PlaySound(70, 0.5, actx.currentTime, 0.1, 0.01, 0.3, 0.3, "sawtooth");
+    Drum(0.3, actx.currentTime, CreateNoiseNode(), true, 1000, 2, 0.02, 0.6, 0);
+}
 
 /**
  * @param {number} frequency
@@ -105,7 +155,7 @@ function NoteToFrequency(octave, note)
  * @param {number} fadeInDuration
  * @param {number} fadeOutDuration
  * @param {number} Q
- * @param {PeriodicWave} wave
+ * @param {PeriodicWave | OscillatorType} wave
  */
 function PlaySound(frequency, volume, when, duration, fadeInDuration, fadeOutDuration, Q, wave)
 {
@@ -143,9 +193,17 @@ function PlaySound(frequency, volume, when, duration, fadeInDuration, fadeOutDur
 
     oscillator.connect(gain);
     gain.connect(filter);
-    filter.connect(globalVolumeNode);
+    filter.connect(globalFilterNode);
 
-    oscillator.setPeriodicWave(wave);
+    if (typeof wave === "string")
+    {
+        oscillator.type = wave;
+    }
+    else
+    {
+        oscillator.setPeriodicWave(wave);
+    }
+
     oscillator.start(when);
     oscillator.stop(time);
 }
@@ -179,7 +237,7 @@ function Drum(volume, when, sourceNode, filter, filterFrequency, Q, fadeInDurati
 
     sourceNode.connect(gainNode);
     gainNode.connect(filterNode);
-    filterNode.connect(globalVolumeNode);
+    filterNode.connect(globalFilterNode);
 
     sourceNode.start(when);
     sourceNode.stop(time);

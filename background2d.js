@@ -28,7 +28,8 @@ function CreateBackground(shader)
         window.requestAnimationFrame(Draw);
 
         const time = performance.now() * 0.001;
-        c.ctx.uniform2f(c.uniformLocations["offset"], camera.position.x / 4, camera.position.y / 4);
+        const backgroundDistance = 4 * 2;
+        c.ctx.uniform2f(c.uniformLocations["offset"], camera.position.x / backgroundDistance, camera.position.y / backgroundDistance);
 
         // black holes
         c.ctx.uniform4fv(c.uniformLocations["blackHoleData"], [

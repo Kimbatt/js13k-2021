@@ -119,7 +119,7 @@ class CSS3dCircle extends CSS3dObject
 
         let arrow = document.createElement("div");
         let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.setAttributeNS(null, "viewBox", "0 0 24 24");
+        svg.setAttributeNS(null, "viewBox", "0 0 50 50");
         svg.setAttributeNS(null, "stroke-width", "1.5");
         svg.setAttributeNS(null, "stroke", "black");
         svg.setAttributeNS(null, "fill", "none");
@@ -128,22 +128,24 @@ class CSS3dCircle extends CSS3dObject
 
         let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttributeNS(null, "fill", "red");
-        path.setAttributeNS(null, "d", "M4 9h8v-3.586a1 1 0 0 1 1.707 -.707l6.586 6.586a1 1 0 0 1 0 1.414l-6.586 6.586a1 1 0 0 1 -1.707 -.707v-3.586h-8a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1z");
+        path.setAttributeNS(null, "d", "M49.071 24.025l-.994-.984c-2.625-2.442-9.001-7.328-18.013-7.328-3.334.001-5.334.429-8.556.888L14.07 9.164.071 12.848v4.007l.525.262 7.536 3.768v8.229L.071 33.145v4.007l13.999 3.684 7.436-7.436c3.213.451 5.22.909 8.557.908 12.016 0 19.347-8.683 19.347-8.683l.518-.613-.52-.614s-.115-.135-.339-.373zm-10.432-1.04A2.84 2.84 0 0 1 39.473 25a2.85 2.85 0 0 1-2.85 2.85 2.85 2.85 0 0 1-2.85-2.85 2.85 2.85 0 0 1 2.85-2.85 2.84 2.84 0 0 1 2.015.834z");
 
         svg.appendChild(path);
         arrow.appendChild(svg);
-        this.circleElement.appendChild(arrow);
+        svg.style.transform = "translate(-50%, -50%)";
 
         this.styleUpdaterFunctions.push(() =>
         {
             this.circleElement.style.width = (size * window.innerHeight) + "px";
             this.circleElement.style.height = (size * window.innerHeight) + "px";
 
-            svg.setAttributeNS(null, "width", `${size * window.innerHeight}px`);
-            svg.setAttributeNS(null, "height", `${size * window.innerHeight}px`);
+            svg.setAttributeNS(null, "width",  `${size * 1.5 * window.innerHeight}px`);
+            svg.setAttributeNS(null, "height", `${size * 1.5 * window.innerHeight}px`);
         });
 
         this.element.appendChild(this.circleElement);
+        this.element.appendChild(arrow);
+        this.element.style.zIndex = "1";
         this.updateTransform();
     }
 }

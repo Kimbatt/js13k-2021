@@ -33,12 +33,31 @@ body
     transform-style: preserve-3d;
 }
 
+#overlay
+{
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+#overlay.visible
+{
+    transition: opacity 0.2s 0.5s;
+    opacity: 1;
+}
+
 </style>
 </head>
 <body>
+    <div id="ui" style="position: absolute; width: 100%; height: 100%; z-index: 10; user-select: none; pointer-events: none;">
+        <div style="width: 30vh; height: 5vh; position: absolute; top: 0px; left: 0px; background-color: black; border: 0.5vh solid #505050;">
+            <div id="boost-bar" style="width: 100%; height: 100%; background-color: red;"></div>
+        </div>
+
+        <div id="overlay" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; background: black;"></div>
+    </div>
 
 <script src="math.js"></script>
-<!-- <script src="audio.js"></script> -->
+<script src="audio.js"></script>
 
 <script src="webgl.js"></script>
 <script src="css3d.js"></script>

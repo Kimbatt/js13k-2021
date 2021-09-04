@@ -2,17 +2,17 @@
 /**
  * @type { {[key: string]: boolean} }
  */
- let keymap = {};
+let keymap = {};
 
- window.addEventListener("keydown", ev =>
- {
-     keymap[ev.key] = true;
- });
+window.addEventListener("keydown", ev =>
+{
+    keymap[ev.key] = true;
+});
 
- window.addEventListener("keyup", ev =>
- {
-     keymap[ev.key] = false;
- });
+window.addEventListener("keyup", ev =>
+{
+    keymap[ev.key] = false;
+});
 
 let scene = new CSS3dScene();
 let camera = scene.camera;
@@ -31,10 +31,10 @@ let particleSystem = new ParticleSystem(scene, particleTemplate, particle =>
     let maxAge = Math.random() * 0.5 + 0.5;
     let age = () => particle.age / maxAge; // percentage [0, 1]
 
-    let angle = Math.random() * Math.PI * 2;
-    particle.sizeX = 0.03;
-    particle.sizeY = 0.03;
-    let speed = Math.random() * 0.1 + 0.2;
+    let angle = particle.userData.angle ?? Math.random() * Math.PI * 2;
+    particle.sizeX = particle.userData.sizeX ?? 0.03;
+    particle.sizeY = particle.userData.sizeY ?? 0.03;
+    let speed = particle.userData.speed ?? Math.random() * 0.1 + 0.2;
 
     particle.position.x = particle.userData.x;
     particle.position.y = particle.userData.y;
@@ -57,8 +57,6 @@ function CreateExplosion(x, y)
 {
     particleSystem.createParticles(50, { x, y });
 }
-
-window.CreateExplosion = CreateExplosion;
 
 /**
  * @type {CSS3dPlanet[]}
@@ -100,15 +98,51 @@ CreatePlanet(0.5, 0, new CSS3dPlanet(0.16, 0, [RandomPlanetColorHsv(), RandomPla
 CreatePlanet(1, 0, new CSS3dPlanet(0.1, 0, [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()], 1));
 // CreatePlanet(5, 0, new CSS3dPlanet(0.5, 0, [color2, color1, color0, color3], 1));
 
-let dead = false;
 let circle = new CSS3dCircle(0.05);
 scene.add(circle);
 
-circle.position.x = -0.3;
-circle.position.y = -0.3;
+let dead = false;
+let velocityX = 2;
+let velocityY = -2;
+let facingAngle = Math.atan2(velocityY, velocityX);
 
-camera.position.x = circle.position.x;
-camera.position.y = circle.position.y;
+let cpx = camera.position.x;
+let cpy = camera.position.y;
+
+let totalBoost = 2;
+let remainingBoost = totalBoost;
+let boostActive = false;
+let overlay = document.getElementById("overlay");
+let boostBar = document.getElementById("boost-bar").style;
+function UpdateRemainingBoost(change)
+{
+    remainingBoost = Math.max(remainingBoost - change, 0);
+    boostBar.width = (remainingBoost / totalBoost * 100) + "%";
+}
+
+function Reset()
+{
+    circle.element.style.opacity = 1;
+
+    circle.position.x = -0.3;
+    circle.position.y = -0.3;
+
+    cpx = circle.position.x;
+    cpy = circle.position.y;
+
+    velocityX = 2;
+    velocityY = -2;
+    facingAngle = Math.atan2(velocityY, velocityX);
+    circle.rotation.z = facingAngle * 180 / Math.PI;
+
+    overlay.classList.remove("visible");
+
+    remainingBoost = totalBoost;
+    UpdateRemainingBoost(0);
+}
+
+
+Reset();
 
 /**
  * @type {[() => void, number][]}
@@ -140,11 +174,12 @@ function Frame(time)
     accumulatedTime += delta;
     window.requestAnimationFrame(Frame);
 
+    let boostWasActive = boostActive;
+
     while (accumulatedTime > 0)
     {
         accumulatedTime -= fixedDelta;
         PhysicsStep();
-        particleSystem.update(fixedDelta);
 
         for (let i = 0; i < timers.length; ++i)
         {
@@ -156,6 +191,12 @@ function Frame(time)
                 currentTimer[0]();
             }
         }
+    }
+
+    if (boostWasActive != boostActive)
+    {
+        boostVolumeNode.gain.linearRampToValueAtTime(boostActive ? 0 : 1, actx.currentTime);
+        boostVolumeNode.gain.linearRampToValueAtTime(boostActive ? 1 : 0, actx.currentTime + 0.1);
     }
 
     scene.render();
@@ -179,14 +220,23 @@ function NormalizeAngle(angle)
     return angle;
 }
 
-let velocityX = 2;
-let velocityY = -2;
-let facingAngle = Math.atan2(velocityY, velocityX);
 
-let cpx = camera.position.x;
-let cpy = camera.position.y;
+let paused = false;
+
 function PhysicsStep()
 {
+    if (keymap["p"])
+    {
+        paused = !paused;
+    }
+
+    if (paused)
+    {
+        return;
+    }
+
+    particleSystem.update(fixedDelta);
+
     // camera
     {
         const maxDistance = 1.5;
@@ -230,25 +280,26 @@ function PhysicsStep()
         if (Math.sqrt(distanceSq) < planet.radius + circle.radius)
         {
             CreateExplosion(circle.position.x, circle.position.y);
+            overlay.classList.add("visible");
             dead = true;
             circle.element.style.opacity = 0;
+
+            PlayExplosionSound();
+            globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime + 0.3);
+            globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime + 0.8);
+
+            SetFixedTimeout(() =>
+            {
+                Reset();
+
+                globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime);
+                globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime + 0.5);
+            }, 1.0);
 
             SetFixedTimeout(() =>
             {
                 dead = false;
-                circle.element.style.opacity = 1;
-
-                // TODO: make a reset function
-                circle.position.x = -0.3;
-                circle.position.y = -0.3;
-
-                cpx = circle.position.x;
-                cpy = circle.position.y;
-
-                velocityX = 2;
-                velocityY = -2;
-                facingAngle = Math.atan2(velocityY, velocityX);
-            }, 1.5);
+            }, 1.2);
 
             return;
         }
@@ -257,7 +308,8 @@ function PhysicsStep()
         velocityY += dirY * magnitude * mult;
     }
 
-    if (keymap[" "])
+    boostActive = !!keymap[" "] && remainingBoost > 0;
+    if (boostActive)
     {
         let x = Math.cos(facingAngle);
         let y = Math.sin(facingAngle);
@@ -271,6 +323,18 @@ function PhysicsStep()
 
         velocityX += x * fixedDelta * acceleration;
         velocityY += y * fixedDelta * acceleration;
+
+        const particleSize = Math.random() * 0.01 + 0.025;
+        particleSystem.createParticles(1, {
+            angle: facingAngle + (Math.random() - 0.5) * 1.0,
+            x: circle.position.x - x * 0.02,
+            y: circle.position.y - y * 0.02,
+            speed: 5 * fixedDelta,
+            sizeX: particleSize,
+            sizeY: particleSize
+        });
+
+        UpdateRemainingBoost(fixedDelta);
     }
 
     velocityX *= 1 - mult * 5;
