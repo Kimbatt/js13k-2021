@@ -89,6 +89,8 @@ class CSS3dObject
             z: 0
         };
 
+        this.scale = 1;
+
         if (updateTransform)
         {
             this.updateTransform();
@@ -97,7 +99,7 @@ class CSS3dObject
 
     updateTransform()
     {
-        this.element.style.transform = `translate3d(${this.position.x * window.innerHeight}px, ${-this.position.y * window.innerHeight}px, ${this.position.z * window.innerHeight}px) rotateX(${this.rotation.x}deg) rotateY(${this.rotation.y}deg) rotateZ(${-this.rotation.z}deg)`;
+        this.element.style.transform = `translate3d(${this.position.x * window.innerHeight}px, ${-this.position.y * window.innerHeight}px, ${this.position.z * window.innerHeight}px) rotateX(${this.rotation.x}deg) rotateY(${this.rotation.y}deg) rotateZ(${-this.rotation.z}deg) scale(${this.scale})`;
         this.styleUpdaterFunctions.forEach(fn => fn());
     }
 }

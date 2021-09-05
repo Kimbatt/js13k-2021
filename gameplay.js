@@ -98,6 +98,28 @@ CreatePlanet(0.5, 0, new CSS3dPlanet(0.16, 0, [RandomPlanetColorHsv(), RandomPla
 CreatePlanet(1, 0, new CSS3dPlanet(0.1, 0, [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()], 1));
 // CreatePlanet(5, 0, new CSS3dPlanet(0.5, 0, [color2, color1, color0, color3], 1));
 
+
+/**
+ * @type {[number, number, number][]}
+ */
+let blackHoles = [];
+
+/**
+ * @param {number} px
+ * @param {number} py
+ * @param {number} radius
+ */
+let blackHoleCount = 0;
+function CreateBlackHole(px, py, radius)
+{
+    let idx = blackHoleCount++;
+    setBlackHoleCount(blackHoleCount);
+    setBlackHoleData(idx, px, py, radius, 1e-4);
+    blackHoles.push([px, py, radius]);
+}
+
+CreateBlackHole(0.4, 0.4, 0.1);
+
 let circle = new CSS3dCircle(0.05);
 scene.add(circle);
 
@@ -127,8 +149,10 @@ function Reset()
     circle.position.x = -0.3;
     circle.position.y = -0.3;
 
-    cpx = circle.position.x;
-    cpy = circle.position.y;
+    circle.scale = 1;
+
+    camera.position.x = cpx = circle.position.x;
+    camera.position.y = cpy = circle.position.y;
 
     velocityX = 2;
     velocityY = -2;
@@ -145,9 +169,9 @@ function Reset()
 Reset();
 
 /**
- * @type {[() => void, number][]}
+ * @type {[() => void, number, boolean][]}
  */
-let timers = [];
+let timers = []; // [0] - callback, [1] - duration, [2] - call every tick
 
 /**
  * @param {() => void} callback
@@ -155,7 +179,16 @@ let timers = [];
  */
 function SetFixedTimeout(callback, time)
 {
-    timers.push([callback, time])
+    timers.push([callback, time, false]);
+}
+
+/**
+ * @param {() => void} callback
+ * @param {number} time
+ */
+function SetFixedTick(callback, time)
+{
+    timers.push([callback, time, true]);
 }
 
 let lastTime = 0;
@@ -184,6 +217,7 @@ function Frame(time)
         for (let i = 0; i < timers.length; ++i)
         {
             let currentTimer = timers[i];
+            currentTimer[2] && currentTimer[0]();
             if ((currentTimer[1] -= fixedDelta) <= 0)
             {
                 timers.splice(i, 1);
@@ -193,6 +227,7 @@ function Frame(time)
         }
     }
 
+    boostActive &&= !dead;
     if (boostWasActive != boostActive)
     {
         boostVolumeNode.gain.linearRampToValueAtTime(boostActive ? 0 : 1, actx.currentTime);
@@ -237,22 +272,22 @@ function PhysicsStep()
 
     particleSystem.update(fixedDelta);
 
+    if (dead)
+    {
+        return;
+    }
+
     // camera
     {
         const maxDistance = 1.5;
 
         let tx = Clamp(Math.abs(cpx - circle.position.x), 0, maxDistance) / maxDistance;
         let ty = Clamp(Math.abs(cpy - circle.position.y), 0, maxDistance) / maxDistance;
-        cpx = Lerp(cpx, circle.position.x, falloff.easeInPoly(tx, 2));
-        cpy = Lerp(cpy, circle.position.y, falloff.easeInPoly(ty, 2));
+        cpx = Lerp(cpx, circle.position.x, falloff.easeInPoly(tx, 1));
+        cpy = Lerp(cpy, circle.position.y, falloff.easeInPoly(ty, 1));
 
-        camera.position.x = cpx;
-        camera.position.y = cpy;
-    }
-
-    if (dead)
-    {
-        return;
+        camera.position.x = circle.position.x * 2 - cpx;
+        camera.position.y = circle.position.y * 2 - cpy;
     }
 
     const speed = 0.02;
@@ -285,8 +320,60 @@ function PhysicsStep()
             circle.element.style.opacity = 0;
 
             PlayExplosionSound();
-            globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime + 0.3);
-            globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime + 0.8);
+            globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime);
+            globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime + 0.5);
+
+            SetFixedTimeout(() =>
+            {
+                Reset();
+
+                globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime);
+                globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime + 0.5);
+            }, 1.0);
+
+            SetFixedTimeout(() =>
+            {
+                dead = false;
+            }, 1.2);
+
+            return;
+        }
+
+        velocityX += dirX * magnitude * mult;
+        velocityY += dirY * magnitude * mult;
+    }
+
+    for (const blackHole of blackHoles)
+    {
+        let dirX = blackHole[0] - circle.position.x;
+        let dirY = blackHole[1] - circle.position.y;
+
+        let distanceSq = dirX * dirX + dirY * dirY;
+
+        let mass = blackHole[2] * 1000;
+
+        let magnitude = mass / distanceSq;
+
+        if (Math.sqrt(distanceSq) < blackHole[2] + circle.radius)
+        {
+            dead = true;
+            overlay.classList.add("visible");
+
+            let scaleTime = 0.3;
+            let t = 0;
+            let startX = circle.position.x;
+            let startY = circle.position.y;
+
+            SetFixedTick(() =>
+            {
+                t += fixedDelta / scaleTime;
+                circle.element.style.opacity = circle.scale = Math.max(0, 1 - t);
+                circle.position.x = Lerp(startX, blackHole[0], t);
+                circle.position.y = Lerp(startY, blackHole[1], t);
+            }, scaleTime);
+
+            globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime);
+            globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime + 0.5);
 
             SetFixedTimeout(() =>
             {
