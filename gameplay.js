@@ -3,15 +3,20 @@
  * @type { {[key: string]: boolean} }
  */
 let keymap = {};
+let spaceDown = false;
+let spaceJustPressed = false;
 
 window.addEventListener("keydown", ev =>
 {
     keymap[ev.key] = true;
+    spaceDown ||= ev.key === " ";
+    spaceJustPressed = spaceDown && !ev.repeat;
 });
 
 window.addEventListener("keyup", ev =>
 {
     keymap[ev.key] = false;
+    spaceDown &&= ev.key !== " ";
 });
 
 let scene = new CSS3dScene();
@@ -245,6 +250,8 @@ function Frame(time)
                 currentTimer[0]();
             }
         }
+
+        spaceJustPressed = false;
     }
 
     if (state === DEAD)
@@ -346,6 +353,7 @@ function PhysicsStep()
                 if (planet.isCheckpoint && !planet.checkpointReached)
                 {
                     state = SPAWNING;
+                    boostActive = false;
                     remainingBoost = totalBoost;
                     UpdateRemainingBoost(0);
                     currentCheckpoint = planet;
@@ -439,7 +447,7 @@ function PhysicsStep()
             velocityY += dirY * magnitude * mult;
         }
 
-        boostActive = !!keymap[" "] && remainingBoost > 0;
+        boostActive = spaceDown && remainingBoost > 0;
         if (boostActive)
         {
             let x = Math.cos(facingAngle);
@@ -495,19 +503,18 @@ function PhysicsStep()
 
         checkpointApproachT = Math.min(checkpointApproachT + fixedDelta / checkpointApproachTime, 1);
 
-        let targetAngle = NormalizeAngle(angle + Math.PI / 2);
+        let targetAngle = angle + Math.PI / 2;
 
         let targetPositionX = currentCheckpoint.position.x + (currentCheckpoint.radius + 0.05) * x;
         let targetPositionY = currentCheckpoint.position.y + (currentCheckpoint.radius + 0.05) * y;
 
         let cpt = falloff.easeOutPoly(checkpointApproachT, 2);
 
-        // TODO: fix flipping
-        facingAngle = Lerp(checkpointApproachStartAngle, targetAngle, cpt);
+        facingAngle = LerpAngle(checkpointApproachStartAngle, targetAngle, cpt);
         circle.position.x = Lerp(checkpointApproachStartX, targetPositionX, cpt);
         circle.position.y = Lerp(checkpointApproachStartY, targetPositionY, cpt);
 
-        if (keymap[" "])
+        if (spaceJustPressed)
         {
             state = ALIVE;
             velocityX = Math.cos(targetAngle) * 15;

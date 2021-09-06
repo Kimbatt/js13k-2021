@@ -2,11 +2,11 @@
 /**
  * @param {number} a
  * @param {number} b
- * @param {number} x
+ * @param {number} t
  */
-function Lerp(a, b, x)
+function Lerp(a, b, t)
 {
-    return a + (b - a) * x;
+    return a + (b - a) * t;
 }
 
 /**
@@ -17,6 +17,20 @@ function Lerp(a, b, x)
 function Unlerp(a, b, t)
 {
     return (t - a) / (b - a);
+}
+
+/**
+ * @param {number} a
+ * @param {number} b
+ * @param {number} t
+ */
+function LerpAngle(a, b, t)
+{
+    let ax = Math.cos(a), ay = Math.sin(a);
+    let bx = Math.cos(b), by = Math.sin(b);
+    let tx = Lerp(ax, bx, t);
+    let ty = Lerp(ay, by, t);
+    return Math.atan2(ty, tx);
 }
 
 /**
