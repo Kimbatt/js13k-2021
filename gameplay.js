@@ -66,10 +66,10 @@ let planets = [];
 let planetColorRng = mulberry32(0);
 function RandomPlanetColorHsv()
 {
-    return [planetColorRng(), planetColorRng(), planetColorRng() * 0.5 + 0.5];
+    return [planetColorRng() * 0.2, planetColorRng(), planetColorRng() * 0.5 + 0.5];
 }
 
-
+const checkpointColor = [[0.55, 1, 4]];
 // const color0 = [1.0, 0.7, 0.5];
 // const color1 = [1.0, 1.0, 1.0];
 // const color2 = [0.2, 0.7, 0.8];
@@ -93,11 +93,12 @@ function CreatePlanet(px, py, planet)
     planets.push(planet);
 }
 
-CreatePlanet(0, 0, new CSS3dPlanet(0.1, 0, [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()], 1));
-CreatePlanet(0.5, 0, new CSS3dPlanet(0.16, 0, [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()], 1));
-CreatePlanet(1, 0, new CSS3dPlanet(0.1, 0, [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()], 1));
+CreatePlanet(0, 0, new CSS3dPlanet(0.1, 0, checkpointColor, 0.001, true));
+CreatePlanet(0.5, 0, new CSS3dPlanet(0.16, 0, [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()], 1, false));
+CreatePlanet(1, 0, new CSS3dPlanet(0.1, 0, [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()], 1, false));
 // CreatePlanet(5, 0, new CSS3dPlanet(0.5, 0, [color2, color1, color0, color3], 1));
 
+CreatePlanet(1.5, 0, new CSS3dPlanet(0.1, 0, checkpointColor, 0.001, true));
 
 /**
  * @type {[number, number, number][]}
@@ -120,10 +121,26 @@ function CreateBlackHole(px, py, radius)
 
 CreateBlackHole(0.4, 0.4, 0.1);
 
+/**
+ * @type {CSS3dPlanet}
+ */
+let currentCheckpoint = planets[0];
+currentCheckpoint.checkpointReached = true;
+currentCheckpoint.element.style.filter = "hue-rotate(-88deg)";
+let checkpointApproachTime = 0.5;
+let checkpointApproachT = 0;
+let checkpointApproachStartX = 0;
+let checkpointApproachStartY = 0;
+let checkpointApproachStartAngle = 0;
+
 let circle = new CSS3dCircle(0.05);
 scene.add(circle);
 
-let dead = false;
+const ALIVE = 0;
+const DEAD = 1;
+const SPAWNING = 2;
+
+let state = SPAWNING;
 let velocityX = 2;
 let velocityY = -2;
 let facingAngle = Math.atan2(velocityY, velocityX);
@@ -160,6 +177,9 @@ function Reset()
     circle.rotation.z = facingAngle * 180 / Math.PI;
 
     overlay.classList.remove("visible");
+
+    checkpointApproachT = 1;
+    state = SPAWNING;
 
     remainingBoost = totalBoost;
     UpdateRemainingBoost(0);
@@ -227,7 +247,11 @@ function Frame(time)
         }
     }
 
-    boostActive &&= !dead;
+    if (state === DEAD)
+    {
+        boostActive = false;
+    }
+
     if (boostWasActive != boostActive)
     {
         boostVolumeNode.gain.linearRampToValueAtTime(boostActive ? 0 : 1, actx.currentTime);
@@ -272,10 +296,13 @@ function PhysicsStep()
 
     particleSystem.update(fixedDelta);
 
-    if (dead)
+    if (state === DEAD)
     {
         return;
     }
+
+    const speed = 0.02;
+    const mult = fixedDelta * speed;
 
     // camera
     {
@@ -290,158 +317,203 @@ function PhysicsStep()
         camera.position.y = circle.position.y * 2 - cpy;
     }
 
-    const speed = 0.02;
-    const mult = fixedDelta * speed;
-    for (const planet of planets)
+    if (state === ALIVE)
     {
-        let dirX = planet.position.x - circle.position.x;
-        let dirY = planet.position.y - circle.position.y;
-
-        // let radius = planet.radius * 4;
-        let distanceSq = dirX * dirX + dirY * dirY;
-
-        // real gravity, based on volume, but just using the same mass for all planets seems to be better
-        // const volume = 4 / 3 * Math.PI * radius * radius * radius;
-        // const mass = 500 * volume;
-
-        // fixed mass
-        const mass = 80;
-
-        // just use the radius
-        // const mass = planet.radius * 200;
-
-        let magnitude = mass / distanceSq;
-
-        if (Math.sqrt(distanceSq) < planet.radius + circle.radius)
+        for (const planet of planets)
         {
-            CreateExplosion(circle.position.x, circle.position.y);
-            overlay.classList.add("visible");
-            dead = true;
-            circle.element.style.opacity = 0;
+            let dirX = planet.position.x - circle.position.x;
+            let dirY = planet.position.y - circle.position.y;
 
-            PlayExplosionSound();
-            globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime);
-            globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime + 0.5);
+            // let radius = planet.radius * 4;
+            let distanceSq = dirX * dirX + dirY * dirY;
 
-            SetFixedTimeout(() =>
+            // real gravity, based on volume, but just using the same mass for all planets seems to be better
+            // const volume = 4 / 3 * Math.PI * radius * radius * radius;
+            // const mass = 500 * volume;
+
+            // fixed mass
+            const mass = 80;
+
+            // just use the radius
+            // const mass = planet.radius * 200;
+
+            let magnitude = mass / distanceSq;
+
+            let withinRange = Math.sqrt(distanceSq) < planet.radius + circle.radius + (planet.isCheckpoint && !planet.checkpointReached ? 0.05 : 0);
+
+            if (withinRange)
             {
-                Reset();
+                if (planet.isCheckpoint && !planet.checkpointReached)
+                {
+                    state = SPAWNING;
+                    remainingBoost = totalBoost;
+                    UpdateRemainingBoost(0);
+                    currentCheckpoint = planet;
+                    planet.checkpointReached = true;
+                    planet.element.style.filter = "hue-rotate(-88deg)";
+                    checkpointApproachT = 0;
+                    checkpointApproachStartX = circle.position.x;
+                    checkpointApproachStartY = circle.position.y;
+                    checkpointApproachStartAngle = facingAngle;
+                    return;
+                }
 
-                globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime);
-                globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime + 0.5);
-            }, 1.0);
+                CreateExplosion(circle.position.x, circle.position.y);
+                PlayExplosionSound();
+                state = DEAD;
+                overlay.classList.add("visible");
+                circle.element.style.opacity = 0;
 
-            SetFixedTimeout(() =>
-            {
-                dead = false;
-            }, 1.2);
+                globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime);
+                globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime + 0.5);
 
-            return;
+                SetFixedTimeout(() =>
+                {
+                    Reset();
+
+                    globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime);
+                    globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime + 0.5);
+                }, 1.0);
+
+                SetFixedTimeout(() =>
+                {
+                    state = SPAWNING;
+                }, 1.2);
+
+                return;
+            }
+
+            velocityX += dirX * magnitude * mult;
+            velocityY += dirY * magnitude * mult;
         }
 
-        velocityX += dirX * magnitude * mult;
-        velocityY += dirY * magnitude * mult;
-    }
-
-    for (const blackHole of blackHoles)
-    {
-        let dirX = blackHole[0] - circle.position.x;
-        let dirY = blackHole[1] - circle.position.y;
-
-        let distanceSq = dirX * dirX + dirY * dirY;
-
-        let mass = blackHole[2] * 1000;
-
-        let magnitude = mass / distanceSq;
-
-        if (Math.sqrt(distanceSq) < blackHole[2] + circle.radius)
+        for (const blackHole of blackHoles)
         {
-            dead = true;
-            overlay.classList.add("visible");
+            let dirX = blackHole[0] - circle.position.x;
+            let dirY = blackHole[1] - circle.position.y;
 
-            let scaleTime = 0.3;
-            let t = 0;
-            let startX = circle.position.x;
-            let startY = circle.position.y;
+            let distanceSq = dirX * dirX + dirY * dirY;
 
-            SetFixedTick(() =>
+            let mass = blackHole[2] * 1000;
+
+            let magnitude = mass / distanceSq;
+
+            if (Math.sqrt(distanceSq) < blackHole[2] + circle.radius)
             {
-                t += fixedDelta / scaleTime;
-                circle.element.style.opacity = circle.scale = Math.max(0, 1 - t);
-                circle.position.x = Lerp(startX, blackHole[0], t);
-                circle.position.y = Lerp(startY, blackHole[1], t);
-            }, scaleTime);
+                state = DEAD;
+                overlay.classList.add("visible");
 
-            globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime);
-            globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime + 0.5);
+                let scaleTime = 0.3;
+                let t = 0;
+                let startX = circle.position.x;
+                let startY = circle.position.y;
 
-            SetFixedTimeout(() =>
-            {
-                Reset();
+                SetFixedTick(() =>
+                {
+                    t += fixedDelta / scaleTime;
+                    circle.element.style.opacity = circle.scale = Math.max(0, 1 - t);
+                    circle.position.x = Lerp(startX, blackHole[0], t);
+                    circle.position.y = Lerp(startY, blackHole[1], t);
+                }, scaleTime);
 
-                globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime);
-                globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime + 0.5);
-            }, 1.0);
+                globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime);
+                globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime + 0.5);
 
-            SetFixedTimeout(() =>
-            {
-                dead = false;
-            }, 1.2);
+                SetFixedTimeout(() =>
+                {
+                    Reset();
 
-            return;
+                    globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime);
+                    globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime + 0.5);
+                }, 1.0);
+
+                SetFixedTimeout(() =>
+                {
+                    state = SPAWNING;
+                }, 1.2);
+
+                return;
+            }
+
+            velocityX += dirX * magnitude * mult;
+            velocityY += dirY * magnitude * mult;
         }
 
-        velocityX += dirX * magnitude * mult;
-        velocityY += dirY * magnitude * mult;
-    }
+        boostActive = !!keymap[" "] && remainingBoost > 0;
+        if (boostActive)
+        {
+            let x = Math.cos(facingAngle);
+            let y = Math.sin(facingAngle);
 
-    boostActive = !!keymap[" "] && remainingBoost > 0;
-    if (boostActive)
+            const boostMaxAcceleration = 500;
+            const normalAcceleration = 15;
+            const minSpeed = 10;
+
+            let speed = Math.hypot(velocityX, velocityY);
+            let acceleration = Lerp(boostMaxAcceleration, normalAcceleration, Clamp(speed / minSpeed, 0, 1));
+
+            velocityX += x * fixedDelta * acceleration;
+            velocityY += y * fixedDelta * acceleration;
+
+            const particleSize = Math.random() * 0.01 + 0.025;
+            particleSystem.createParticles(1, {
+                angle: facingAngle + (Math.random() - 0.5) * 1.0,
+                x: circle.position.x - x * 0.02,
+                y: circle.position.y - y * 0.02,
+                speed: 5 * fixedDelta,
+                sizeX: particleSize,
+                sizeY: particleSize
+            });
+
+            UpdateRemainingBoost(fixedDelta);
+        }
+
+        velocityX *= 1 - mult * 5;
+        velocityY *= 1 - mult * 5;
+
+        const maxSpeed = 25;
+        let currentSpeed = Math.hypot(velocityX, velocityY);
+        let targetSpeed = Math.min(maxSpeed, currentSpeed);
+        velocityX *= targetSpeed / currentSpeed;
+        velocityY *= targetSpeed / currentSpeed;
+
+        circle.position.x += velocityX * mult;
+        circle.position.y += velocityY * mult;
+
+        let currentAngle = Math.atan2(velocityY, velocityX);
+        let angleDiff = NormalizeAngle(currentAngle - facingAngle);
+
+        const maxAngleDiff = 80 * mult;
+        angleDiff = Clamp(angleDiff, -maxAngleDiff, maxAngleDiff);
+        facingAngle = NormalizeAngle(facingAngle + angleDiff);
+    }
+    else if (state === SPAWNING)
     {
-        let x = Math.cos(facingAngle);
-        let y = Math.sin(facingAngle);
+        let angle = Math.atan2(circle.position.y - currentCheckpoint.position.y, circle.position.x - currentCheckpoint.position.x) + fixedDelta * 1.5;
+        let x = Math.cos(angle);
+        let y = Math.sin(angle);
 
-        const boostMaxAcceleration = 500;
-        const normalAcceleration = 15;
-        const minSpeed = 10;
+        checkpointApproachT = Math.min(checkpointApproachT + fixedDelta / checkpointApproachTime, 1);
 
-        let speed = Math.hypot(velocityX, velocityY);
-        let acceleration = Lerp(boostMaxAcceleration, normalAcceleration, Clamp(speed / minSpeed, 0, 1));
+        let targetAngle = NormalizeAngle(angle + Math.PI / 2);
 
-        velocityX += x * fixedDelta * acceleration;
-        velocityY += y * fixedDelta * acceleration;
+        let targetPositionX = currentCheckpoint.position.x + (currentCheckpoint.radius + 0.05) * x;
+        let targetPositionY = currentCheckpoint.position.y + (currentCheckpoint.radius + 0.05) * y;
 
-        const particleSize = Math.random() * 0.01 + 0.025;
-        particleSystem.createParticles(1, {
-            angle: facingAngle + (Math.random() - 0.5) * 1.0,
-            x: circle.position.x - x * 0.02,
-            y: circle.position.y - y * 0.02,
-            speed: 5 * fixedDelta,
-            sizeX: particleSize,
-            sizeY: particleSize
-        });
+        let cpt = falloff.easeOutPoly(checkpointApproachT, 2);
 
-        UpdateRemainingBoost(fixedDelta);
+        // TODO: fix flipping
+        facingAngle = Lerp(checkpointApproachStartAngle, targetAngle, cpt);
+        circle.position.x = Lerp(checkpointApproachStartX, targetPositionX, cpt);
+        circle.position.y = Lerp(checkpointApproachStartY, targetPositionY, cpt);
+
+        if (keymap[" "])
+        {
+            state = ALIVE;
+            velocityX = Math.cos(targetAngle) * 15;
+            velocityY = Math.sin(targetAngle) * 15;
+        }
     }
-
-    velocityX *= 1 - mult * 5;
-    velocityY *= 1 - mult * 5;
-
-    const maxSpeed = 25;
-    let currentSpeed = Math.hypot(velocityX, velocityY);
-    let targetSpeed = Math.min(maxSpeed, currentSpeed);
-    velocityX *= targetSpeed / currentSpeed;
-    velocityY *= targetSpeed / currentSpeed;
-
-    circle.position.x += velocityX * mult;
-    circle.position.y += velocityY * mult;
-
-    let currentAngle = Math.atan2(velocityY, velocityX);
-    let angleDiff = NormalizeAngle(currentAngle - facingAngle);
-
-    const maxAngleDiff = 80 * mult;
-    angleDiff = Clamp(angleDiff, -maxAngleDiff, maxAngleDiff);
-    facingAngle = NormalizeAngle(facingAngle + angleDiff);
 
     circle.rotation.z = facingAngle * 180 / Math.PI;
 }
