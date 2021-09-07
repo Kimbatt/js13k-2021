@@ -10,6 +10,7 @@ let setBlackHoleCount;
     // https://www.shadertoy.com/view/XlfGRj
 
     uniform vec2 offset;
+    uniform float globalZoom;
 
     #define iterations 15
     #define formuparam 0.56
@@ -27,7 +28,7 @@ let setBlackHoleCount;
     #define saturation 1.0
 
 
-    #define maxNumBlackHoles 5
+    #define maxNumBlackHoles 6
     uniform int numBlackHoles;
     uniform vec4 blackHoleData[maxNumBlackHoles]; // xy - position, z - radius, w - effect radius
 
@@ -57,7 +58,7 @@ let setBlackHoleCount;
 
         //get coords and direction
         vec2 uv = fragCoord - 0.5;
-        uv /= backgroundDistance;
+        uv /= backgroundDistance * globalZoom;
         uv.x *= uAspect.x;
 
         vec2 offsetLocal = offset / backgroundDistance / backgroundDistanceMultiplier;
@@ -149,7 +150,7 @@ let setBlackHoleCount;
         // fragColor.g *= 0.6;
     }`;
 
-    const c = new WebGLCanvas(shader, "offset", "numBlackHoles", "blackHoleData");
+    const c = new WebGLCanvas(shader, "offset", "globalZoom", "numBlackHoles", "blackHoleData");
     document.body.appendChild(c.canvas);
     c.canvas.style.position = "absolute";
     c.canvas.style.zIndex = "-3";
@@ -167,16 +168,18 @@ let setBlackHoleCount;
     {
         window.requestAnimationFrame(Draw);
         c.ctx.uniform2f(c.uniformLocations["offset"], camera.position.x, camera.position.y);
+        c.ctx.uniform1f(c.uniformLocations["globalZoom"], zoom);
 
         c.render();
     }
 
     let blackHoleData = [
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
+        9e9, 9e9, 0, 0,
+        9e9, 9e9, 0, 0,
+        9e9, 9e9, 0, 0,
+        9e9, 9e9, 0, 0,
+        9e9, 9e9, 0, 0,
+        9e9, 9e9, 0, 0,
     ];
 
     setBlackHoleCount = count =>

@@ -147,6 +147,13 @@ function PlayExplosionSound()
     Drum(0.3, actx.currentTime, CreateNoiseNode(), true, 1000, 2, 0.02, 0.6, 0);
 }
 
+function PlayCheckpointSound()
+{
+    Drum(0.2, actx.currentTime, CreateNoiseNode(), true, 1000, 2, 0.01, 0.05, 0.1);
+    PlaySound(555, 1, actx.currentTime, 0.1, 0.01, 0.2, 10, "sawtooth");
+    PlaySound(66, 1, actx.currentTime, 0.1, 0.01, 0.2, 10, "sawtooth");
+}
+
 /**
  * @param {number} frequency
  * @param {number} volume

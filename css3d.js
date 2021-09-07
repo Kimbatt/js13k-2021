@@ -1,4 +1,5 @@
 
+let zoom = 1;
 class CSS3dCamera
 {
     /**
@@ -17,7 +18,7 @@ class CSS3dCamera
 
     updateTransform()
     {
-        this.scene.element.style.transform = `translate3d(${-this.position.x * window.innerHeight}px, ${this.position.y * window.innerHeight}px, ${-this.position.z * window.innerHeight}px)`;
+        this.scene.element.style.transform = `scale(${zoom}) translate3d(${-this.position.x * window.innerHeight}px, ${this.position.y * window.innerHeight}px, ${-this.position.z * window.innerHeight}px)`;
     }
 }
 

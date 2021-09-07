@@ -73,12 +73,6 @@ const checkpointColor = [[0.55, 1, 4]];
 
 const maxBlackHolesPerLevel = 2;
 setBlackHoleCount(maxBlackHolesPerLevel * 3);
-setBlackHoleData(0, 9e9, 9e9, 0, 0);
-setBlackHoleData(1, 9e9, 9e9, 0, 0);
-setBlackHoleData(2, 9e9, 9e9, 0, 0);
-setBlackHoleData(3, 9e9, 9e9, 0, 0);
-setBlackHoleData(4, 9e9, 9e9, 0, 0);
-setBlackHoleData(5, 9e9, 9e9, 0, 0);
 
 /**
  * @type {CSS3dPlanet[]}
@@ -206,6 +200,10 @@ let remainingBoost = totalBoost;
 let boostActive = false;
 let overlay = document.getElementById("overlay");
 let boostBar = document.getElementById("boost-bar").style;
+
+/**
+ * @param {number} change
+ */
 function UpdateRemainingBoost(change)
 {
     remainingBoost = Math.max(remainingBoost - change, 0);
@@ -216,8 +214,8 @@ function Reset()
 {
     circle.element.style.opacity = 1;
 
-    circle.position.x = -0.3;
-    circle.position.y = -0.3;
+    circle.position.x = currentCheckpoint.position.x;
+    circle.position.y = currentCheckpoint.position.y - currentCheckpoint.radius - 0.05;
 
     circle.scale = 1;
 
@@ -228,6 +226,7 @@ function Reset()
     velocityY = -2;
     facingAngle = Math.atan2(velocityY, velocityX);
     circle.rotation.z = facingAngle * 180 / Math.PI;
+    zoom = 1;
 
     overlay.classList.remove("visible");
 
@@ -339,11 +338,6 @@ let paused = false;
 
 function PhysicsStep()
 {
-    if (keymap["p"])
-    {
-        paused = !paused;
-    }
-
     if (paused)
     {
         return;
@@ -361,15 +355,18 @@ function PhysicsStep()
 
     // camera
     {
-        const maxDistance = 1.5;
+        const maxDistance = 5;
 
         let tx = Clamp(Math.abs(cpx - circle.position.x), 0, maxDistance) / maxDistance;
         let ty = Clamp(Math.abs(cpy - circle.position.y), 0, maxDistance) / maxDistance;
-        cpx = Lerp(cpx, circle.position.x, falloff.easeInPoly(tx, 1));
-        cpy = Lerp(cpy, circle.position.y, falloff.easeInPoly(ty, 1));
+        cpx = Lerp(cpx, circle.position.x, falloff.easeInPoly(tx, 1.5));
+        cpy = Lerp(cpy, circle.position.y, falloff.easeInPoly(ty, 1.5));
 
-        camera.position.x = circle.position.x * 2 - cpx;
-        camera.position.y = circle.position.y * 2 - cpy;
+        camera.position.x = cpx;
+        camera.position.y = cpy;
+
+        let j = 1 + Smoothstep(10, 25, Math.hypot(velocityX, velocityY)) * 0.2;
+        zoom = Lerp(zoom, 1 / j, fixedDelta * 0.5);
     }
 
     if (state === ALIVE)
@@ -401,7 +398,9 @@ function PhysicsStep()
                 if (planet.isCheckpoint && !planet.checkpointReached)
                 {
                     state = SPAWNING;
+                    velocityX = velocityY = 0;
                     LoadLevel(++currentLevelIdx + 1);
+                    PlayCheckpointSound();
                     boostActive = false;
                     remainingBoost = totalBoost;
                     UpdateRemainingBoost(0);
@@ -431,11 +430,6 @@ function PhysicsStep()
                     globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime);
                     globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime + 0.5);
                 }, 1.0);
-
-                SetFixedTimeout(() =>
-                {
-                    state = SPAWNING;
-                }, 1.2);
 
                 return;
             }
@@ -483,11 +477,6 @@ function PhysicsStep()
                     globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime);
                     globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime + 0.5);
                 }, 1.0);
-
-                SetFixedTimeout(() =>
-                {
-                    state = SPAWNING;
-                }, 1.2);
 
                 return;
             }

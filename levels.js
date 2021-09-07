@@ -2,7 +2,7 @@
 // [x, y, radius]
 let levelData = [
     {
-        checkpoint: [0, 0, 0.1],
+        checkpoint: [0, 0.2, 0.1],
         planets: [
             [0.5, 0, 0.16],
             [1, 0, 0.1],
