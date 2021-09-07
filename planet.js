@@ -7,8 +7,9 @@ class CSS3dPlanet extends CSS3dObject
      * @param {[number, number, number][]} colors
      * @param {number} noiseScale
      * @param {boolean} isCheckpoint
+     * @param {number} level
      */
-    constructor(radius, seed, colors, noiseScale, isCheckpoint)
+    constructor(radius, seed, colors, noiseScale, isCheckpoint, level)
     {
         super(false);
         this.element.style.zIndex = "-1";
@@ -16,6 +17,7 @@ class CSS3dPlanet extends CSS3dObject
         this.radius = radius;
         this.isCheckpoint = isCheckpoint;
         this.checkpointReached = false;
+        this.level = level;
 
         let shader = `
 

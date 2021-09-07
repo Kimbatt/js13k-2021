@@ -63,11 +63,6 @@ function CreateExplosion(x, y)
     particleSystem.createParticles(50, { x, y });
 }
 
-/**
- * @type {CSS3dPlanet[]}
- */
-let planets = [];
-
 let planetColorRng = mulberry32(0);
 function RandomPlanetColorHsv()
 {
@@ -75,56 +70,109 @@ function RandomPlanetColorHsv()
 }
 
 const checkpointColor = [[0.55, 1, 4]];
-// const color0 = [1.0, 0.7, 0.5];
-// const color1 = [1.0, 1.0, 1.0];
-// const color2 = [0.2, 0.7, 0.8];
-// const color3 = [0.5, 0.7, 0.0];
 
-// CreatePlanet(0.02, 0, [color0, color1, color2, color3], 1);
-// CreatePlanet(0.04, 0, [color1, color2, color3, color0], 1);
-// CreatePlanet(0.08, 0, [color2, color3, color0, color1], 1);
-// CreatePlanet(0.16, 0, [color3, color0, color1, color2], 1);
+const maxBlackHolesPerLevel = 2;
+setBlackHoleCount(maxBlackHolesPerLevel * 3);
+setBlackHoleData(0, 9e9, 9e9, 0, 0);
+setBlackHoleData(1, 9e9, 9e9, 0, 0);
+setBlackHoleData(2, 9e9, 9e9, 0, 0);
+setBlackHoleData(3, 9e9, 9e9, 0, 0);
+setBlackHoleData(4, 9e9, 9e9, 0, 0);
+setBlackHoleData(5, 9e9, 9e9, 0, 0);
 
 /**
- * @param {number} px
- * @param {number} py
- * @param {CSS3dPlanet} planet
+ * @type {CSS3dPlanet[]}
  */
-function CreatePlanet(px, py, planet)
-{
-    planet.position.x = px;
-    planet.position.y = py;
-    scene.add(planet);
-    planets.push(planet);
-}
-
-CreatePlanet(0, 0, new CSS3dPlanet(0.1, 0, checkpointColor, 0.001, true));
-CreatePlanet(0.5, 0, new CSS3dPlanet(0.16, 0, [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()], 1, false));
-CreatePlanet(1, 0, new CSS3dPlanet(0.1, 0, [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()], 1, false));
-// CreatePlanet(5, 0, new CSS3dPlanet(0.5, 0, [color2, color1, color0, color3], 1));
-
-CreatePlanet(1.5, 0, new CSS3dPlanet(0.1, 0, checkpointColor, 0.001, true));
+let planets = [];
 
 /**
- * @type {[number, number, number][]}
+ * @type {[number, number, number, number, number][]} // posX, posY, radius, level, blackHoleIndex
  */
 let blackHoles = [];
 
+let currentLevelIdx = 0;
 /**
- * @param {number} px
- * @param {number} py
- * @param {number} radius
+ * @param {number} idx
  */
-let blackHoleCount = 0;
-function CreateBlackHole(px, py, radius)
+function LoadLevel(idx)
 {
-    let idx = blackHoleCount++;
-    setBlackHoleCount(blackHoleCount);
-    setBlackHoleData(idx, px, py, radius, 1e-4);
-    blackHoles.push([px, py, radius]);
+    UnloadLevel(idx - 3);
+
+    if (idx >= levelData.length)
+    {
+        return;
+    }
+
+    /**
+     * @param {[number, number, number]} data
+     * @param {boolean} isCheckpoint
+     */
+    function CreatePlanetLocal(data, isCheckpoint)
+    {
+        let planet = new CSS3dPlanet(data[2], 0,
+            isCheckpoint ? checkpointColor : [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()],
+            isCheckpoint ? 0.001 : 1,
+            isCheckpoint,
+            idx
+        );
+
+        planet.position.x = data[0];
+        planet.position.y = data[1];
+        scene.add(planet);
+
+        return planet;
+    }
+
+    let blackHoleCount = 0;
+    /**
+     * @param {[number, number, number]} data
+     */
+    function CreateBlackHoleLocal(data)
+    {
+        let i = (idx % 3) * maxBlackHolesPerLevel + blackHoleCount++;
+        setBlackHoleData(i, data[0], data[1], data[2], 1e-4);
+        return [...data, idx, i];
+    }
+
+    planets = [
+        ...planets,
+        CreatePlanetLocal(levelData[idx].checkpoint, true),
+        ...levelData[idx].planets.map(data => CreatePlanetLocal(data, false))
+    ];
+
+    blackHoles = [
+        ...levelData[idx].blackholes.map(CreateBlackHoleLocal),
+        ...blackHoles
+    ];
 }
 
-CreateBlackHole(0.4, 0.4, 0.1);
+LoadLevel(0);
+LoadLevel(1);
+
+/**
+ * @param {number} idx
+ */
+function UnloadLevel(idx)
+{
+    if (idx < 0)
+    {
+        return;
+    }
+
+    planets = planets.filter(planet =>
+    {
+        let remove = planet.level === idx;
+        remove && scene.remove(planet);
+        return !remove;
+    });
+
+    blackHoles = blackHoles.filter(blackHole =>
+    {
+        let remove = blackHole[3] === idx;
+        remove && setBlackHoleData(blackHole[4], 9e9, 9e9, 0, 0);
+        return !remove;
+    });
+}
 
 /**
  * @type {CSS3dPlanet}
@@ -153,7 +201,7 @@ let facingAngle = Math.atan2(velocityY, velocityX);
 let cpx = camera.position.x;
 let cpy = camera.position.y;
 
-let totalBoost = 2;
+let totalBoost = 5;
 let remainingBoost = totalBoost;
 let boostActive = false;
 let overlay = document.getElementById("overlay");
@@ -353,6 +401,7 @@ function PhysicsStep()
                 if (planet.isCheckpoint && !planet.checkpointReached)
                 {
                     state = SPAWNING;
+                    LoadLevel(++currentLevelIdx + 1);
                     boostActive = false;
                     remainingBoost = totalBoost;
                     UpdateRemainingBoost(0);
