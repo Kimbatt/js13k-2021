@@ -22,8 +22,8 @@ class Particle extends CSS3dObject
 
         this.styleUpdaterFunctions.push(() =>
         {
-            element.style.width = (window.innerHeight * this.sizeX) + "px";
-            element.style.height = (window.innerHeight * this.sizeY) + "px";
+            element.style.width = (WindowSize() * this.sizeX) + "px";
+            element.style.height = (WindowSize() * this.sizeY) + "px";
         });
 
         this.update(0);

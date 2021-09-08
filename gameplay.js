@@ -84,6 +84,11 @@ let planets = [];
  */
 let blackHoles = [];
 
+/**
+ * @type {CSS3dPlanet}
+ */
+let nextCheckpoint;
+
 let currentLevelIdx = 0;
 /**
  * @param {number} idx
@@ -130,7 +135,7 @@ function LoadLevel(idx)
 
     planets = [
         ...planets,
-        CreatePlanetLocal(levelData[idx].checkpoint, true),
+        nextCheckpoint = CreatePlanetLocal(levelData[idx].checkpoint, true),
         ...levelData[idx].planets.map(data => CreatePlanetLocal(data, false))
     ];
 
@@ -167,6 +172,11 @@ function UnloadLevel(idx)
         return !remove;
     });
 }
+
+let arrow = new CSS3dArrow();
+scene.add(arrow);
+arrow.position.x = 0;
+arrow.position.y = 0;
 
 /**
  * @type {CSS3dPlanet}
@@ -310,6 +320,26 @@ function Frame(time)
     {
         boostVolumeNode.gain.linearRampToValueAtTime(boostActive ? 0 : 1, actx.currentTime);
         boostVolumeNode.gain.linearRampToValueAtTime(boostActive ? 1 : 0, actx.currentTime + 0.1);
+    }
+
+    {
+        const arrowRadius = 0.45 / zoom;
+        const aspect = innerWidth / innerHeight;
+
+        const wx = arrowRadius * aspect;
+        const wy = arrowRadius;
+        const distX = nextCheckpoint.position.x - camera.position.x;
+        const distY = nextCheckpoint.position.y - camera.position.y;
+        const offsetX = Clamp(distX, -wx, wx);
+        const offsetY = Clamp(distY, -wy, wy);
+
+        arrow.position.x = camera.position.x + offsetX;
+        arrow.position.y = camera.position.y + offsetY;
+
+        arrow.rotation.z = Math.atan2(distY, distX) * 180 / Math.PI;
+
+        let visible = Math.abs(distX) > wx * 1.5 || Math.abs(distY) > wy * 1.5;
+        arrow.element.style.opacity = +visible;
     }
 
     scene.render();

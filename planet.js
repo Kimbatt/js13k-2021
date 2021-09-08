@@ -81,7 +81,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
             if (this.shouldRender)
             {
                 this.shouldRender = false;
-                const size = window.innerHeight * radius * 2;
+                const size = WindowSize() * radius * 2;
                 c.resize(size, size);
                 c.render();
             }

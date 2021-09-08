@@ -50,6 +50,10 @@ body
     transition: filter 0.2s ease;
 }
 
+.arrow
+{
+    transition: opacity 0.2s linear;
+}
 </style>
 </head>
 <body>
@@ -60,6 +64,13 @@ body
 
         <div id="overlay" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; background: black;"></div>
     </div>
+
+    <script>
+        function WindowSize()
+        {
+            return innerHeight;
+        }
+    </script>
 
 <script src="math.js"></script>
 <script src="audio.js"></script>

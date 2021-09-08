@@ -18,7 +18,7 @@ class CSS3dCamera
 
     updateTransform()
     {
-        this.scene.element.style.transform = `scale(${zoom}) translate3d(${-this.position.x * window.innerHeight}px, ${this.position.y * window.innerHeight}px, ${-this.position.z * window.innerHeight}px)`;
+        this.scene.element.style.transform = `scale(${zoom}) translate3d(${-this.position.x * WindowSize()}px, ${this.position.y * WindowSize()}px, ${-this.position.z * WindowSize()}px)`;
     }
 }
 
@@ -100,7 +100,7 @@ class CSS3dObject
 
     updateTransform()
     {
-        this.element.style.transform = `translate3d(${this.position.x * window.innerHeight}px, ${-this.position.y * window.innerHeight}px, ${this.position.z * window.innerHeight}px) rotateX(${this.rotation.x}deg) rotateY(${this.rotation.y}deg) rotateZ(${-this.rotation.z}deg) scale(${this.scale})`;
+        this.element.style.transform = `translate3d(${this.position.x * WindowSize()}px, ${-this.position.y * WindowSize()}px, ${this.position.z * WindowSize()}px) rotateX(${this.rotation.x}deg) rotateY(${this.rotation.y}deg) rotateZ(${-this.rotation.z}deg) scale(${this.scale})`;
         this.styleUpdaterFunctions.forEach(fn => fn());
     }
 }
@@ -139,11 +139,11 @@ class CSS3dCircle extends CSS3dObject
 
         this.styleUpdaterFunctions.push(() =>
         {
-            this.circleElement.style.width = (size * window.innerHeight) + "px";
-            this.circleElement.style.height = (size * window.innerHeight) + "px";
+            this.circleElement.style.width = (size * WindowSize()) + "px";
+            this.circleElement.style.height = (size * WindowSize()) + "px";
 
-            svg.setAttributeNS(null, "width",  `${size * 1.5 * window.innerHeight}px`);
-            svg.setAttributeNS(null, "height", `${size * 1.5 * window.innerHeight}px`);
+            svg.setAttributeNS(null, "width",  `${size * 1.5 * WindowSize()}px`);
+            svg.setAttributeNS(null, "height", `${size * 1.5 * WindowSize()}px`);
         });
 
         this.element.appendChild(this.circleElement);
@@ -179,9 +179,9 @@ class CSS3dCube extends CSS3dObject
 
             this.styleUpdaterFunctions.push(() =>
             {
-                side.style.width = (size * window.innerHeight) + "px";
-                side.style.height = (size * window.innerHeight) + "px";
-                side.style.transform = `translate(-50%, -50%) translate3d(${mult0*size * window.innerHeight}px, ${mult1*size * window.innerHeight}px, ${mult2*size * window.innerHeight}px) rotate3d(${rot}, ${angle}deg)`;
+                side.style.width = (size * WindowSize()) + "px";
+                side.style.height = (size * WindowSize()) + "px";
+                side.style.transform = `translate(-50%, -50%) translate3d(${mult0*size * WindowSize()}px, ${mult1*size * WindowSize()}px, ${mult2*size * WindowSize()}px) rotate3d(${rot}, ${angle}deg)`;
             });
         };
 
@@ -192,6 +192,43 @@ class CSS3dCube extends CSS3dObject
         createSide(0.5, 0, 0, "0,1,0", 90);
         createSide(-0.5, 0, 0, "0,1,0", -90);
 
+        this.updateTransform();
+    }
+}
+
+class CSS3dArrow extends CSS3dObject
+{
+    constructor()
+    {
+        super();
+        this.element.className = "arrow";
+
+        let size = 0.1;
+
+        let arrow = document.createElement("div");
+        let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttributeNS(null, "viewBox", "0 0 8 8");
+        svg.setAttributeNS(null, "stroke-width", "0.5");
+        svg.setAttributeNS(null, "stroke", "#0f0");
+        svg.setAttributeNS(null, "fill", "#0f0");
+        svg.setAttributeNS(null, "stroke-linecap", "round");
+        svg.setAttributeNS(null, "stroke-linejoin", "round");
+
+        let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttributeNS(null, "d", "M2 2L6 4L2 6L3 4Z");
+
+        svg.appendChild(path);
+        arrow.appendChild(svg);
+        svg.style.transform = "translate(-50%, -50%)";
+
+        this.styleUpdaterFunctions.push(() =>
+        {
+            svg.setAttributeNS(null, "width",  `${size * WindowSize()}px`);
+            svg.setAttributeNS(null, "height", `${size * WindowSize()}px`);
+        });
+
+        this.element.appendChild(arrow);
+        this.element.style.zIndex = "2";
         this.updateTransform();
     }
 }
