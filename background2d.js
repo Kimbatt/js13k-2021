@@ -197,4 +197,5 @@ let setBlackHoleCount;
 
         c.ctx.uniform4fv(c.uniformLocations["blackHoleData"], blackHoleData);
     };
+    c.ctx.uniform4fv(c.uniformLocations["blackHoleData"], blackHoleData);
 }

@@ -252,17 +252,17 @@ function Drum(volume, when, sourceNode, filter, filterFrequency, Q, fadeInDurati
 
 function Hat(when)
 {
-    Drum(0.4, when, CreateNoiseNode(), true, 10000, 2);
+    Drum(0.2, when, CreateNoiseNode(), true, 10000, 2);
 }
 
 function Hat2(when)
 {
-    Drum(0.4, when, CreateNoiseNode(), true, 10000, 1, 0.02, 0.06);
+    Drum(0.2, when, CreateNoiseNode(), true, 10000, 1, 0.02, 0.06);
 }
 
 function Snare(when)
 {
-    Drum(0.3, when, CreateNoiseNode(), true, 1800, 1, 0.01, 0.05, 0.07);
+    Drum(0.1, when, CreateNoiseNode(), true, 1800, 1, 0.01, 0.05, 0.07);
 }
 
 function Kick(when)
@@ -274,7 +274,7 @@ function Kick(when)
     sourceNode.frequency.linearRampToValueAtTime(startFreq, when + 0.01 + timeOffset);
     sourceNode.frequency.linearRampToValueAtTime(50, when + 0.03 + timeOffset);
 
-    Drum(0.6, when + timeOffset, sourceNode, false, 0, 0, 0.01, 0.1, 0.05);
+    Drum(0.3, when + timeOffset, sourceNode, false, 0, 0, 0.01, 0.1, 0.05);
 }
 
 let duration = 8;
@@ -293,7 +293,7 @@ function Start()
     function PlayEcho(when, octave, note, duration)
     {
         let freq = NoteToFrequency(octave, note);
-        let baseVolume = 0.2;
+        let baseVolume = 0.1;
         PlaySound(freq, baseVolume / 1, when,        duration, 0.01, 0.05, 0.02, soundWave);
         PlaySound(freq, baseVolume / 1.5, when + 0.25, duration, 0.01, 0.05, 0.5, soundWave);
         PlaySound(freq, baseVolume / 2, when + 0.50, duration, 0.01, 0.05, 1, soundWave);

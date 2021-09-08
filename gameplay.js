@@ -5,12 +5,14 @@
 let keymap = {};
 let spaceDown = false;
 let spaceJustPressed = false;
+let enterJustPressed = false;
 
 window.addEventListener("keydown", ev =>
 {
     keymap[ev.key] = true;
     spaceDown ||= ev.key === " ";
     spaceJustPressed = spaceDown && !ev.repeat;
+    enterJustPressed ||= ev.key === "Enter" && !ev.repeat;
 });
 
 window.addEventListener("keyup", ev =>
@@ -115,8 +117,8 @@ function LoadLevel(idx)
             idx
         );
 
-        planet.position.x = data[0];
-        planet.position.y = data[1];
+        planet.position.x = data[0] + (isCheckpoint ? 0 : nextCheckpoint.position.x);
+        planet.position.y = data[1] + (isCheckpoint ? 0 : nextCheckpoint.position.y);
         scene.add(planet);
 
         return planet;
@@ -129,8 +131,10 @@ function LoadLevel(idx)
     function CreateBlackHoleLocal(data)
     {
         let i = (idx % 3) * maxBlackHolesPerLevel + blackHoleCount++;
-        setBlackHoleData(i, data[0], data[1], data[2], 1e-4);
-        return [...data, idx, i];
+        let x = nextCheckpoint.position.x + data[0];
+        let y = nextCheckpoint.position.y + data[1];
+        setBlackHoleData(i, x, y, data[2], data[3]);
+        return [x, y, data[2], idx, i];
     }
 
     planets = [
@@ -145,8 +149,8 @@ function LoadLevel(idx)
     ];
 }
 
-LoadLevel(0);
-LoadLevel(1);
+LoadLevel(currentLevelIdx);
+LoadLevel(currentLevelIdx + 1);
 
 /**
  * @param {number} idx
@@ -205,11 +209,13 @@ let facingAngle = Math.atan2(velocityY, velocityX);
 let cpx = camera.position.x;
 let cpy = camera.position.y;
 
-let totalBoost = 5;
+let totalBoost = levelData[currentLevelIdx].boost;
 let remainingBoost = totalBoost;
 let boostActive = false;
 let overlay = document.getElementById("overlay");
 let boostBar = document.getElementById("boost-bar").style;
+let boostContainer = document.getElementById("boost-container").style;
+boostContainer.width = totalBoost * 10 + "vh";
 
 /**
  * @param {number} change
@@ -309,6 +315,7 @@ function Frame(time)
         }
 
         spaceJustPressed = false;
+        enterJustPressed = false;
     }
 
     if (state === DEAD)
@@ -364,6 +371,26 @@ function NormalizeAngle(angle)
 }
 
 
+function Explode()
+{
+    CreateExplosion(circle.position.x, circle.position.y);
+    PlayExplosionSound();
+    state = DEAD;
+    overlay.classList.add("visible");
+    circle.element.style.opacity = 0;
+
+    globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime);
+    globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime + 0.5);
+
+    SetFixedTimeout(() =>
+    {
+        Reset();
+
+        globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime);
+        globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime + 0.5);
+    }, 1.0);
+}
+
 let paused = false;
 
 function PhysicsStep()
@@ -395,12 +422,18 @@ function PhysicsStep()
         camera.position.x = cpx;
         camera.position.y = cpy;
 
-        let j = 1 + Smoothstep(10, 25, Math.hypot(velocityX, velocityY)) * 0.2;
+        let j = 1 + Smoothstep(10, 25, Math.hypot(velocityX, velocityY)) * 0.5;
         zoom = Lerp(zoom, 1 / j, fixedDelta * 0.5);
     }
 
     if (state === ALIVE)
     {
+        if (enterJustPressed)
+        {
+            Explode();
+            return;
+        }
+
         for (const planet of planets)
         {
             let dirX = planet.position.x - circle.position.x;
@@ -432,7 +465,9 @@ function PhysicsStep()
                     LoadLevel(++currentLevelIdx + 1);
                     PlayCheckpointSound();
                     boostActive = false;
+                    totalBoost = levelData[currentLevelIdx].boost;
                     remainingBoost = totalBoost;
+                    boostContainer.width = totalBoost * 10 + "vh";
                     UpdateRemainingBoost(0);
                     currentCheckpoint = planet;
                     planet.checkpointReached = true;
@@ -444,23 +479,7 @@ function PhysicsStep()
                     return;
                 }
 
-                CreateExplosion(circle.position.x, circle.position.y);
-                PlayExplosionSound();
-                state = DEAD;
-                overlay.classList.add("visible");
-                circle.element.style.opacity = 0;
-
-                globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime);
-                globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime + 0.5);
-
-                SetFixedTimeout(() =>
-                {
-                    Reset();
-
-                    globalFilterNode.gain.linearRampToValueAtTime(-20, actx.currentTime);
-                    globalFilterNode.gain.linearRampToValueAtTime(0, actx.currentTime + 0.5);
-                }, 1.0);
-
+                Explode();
                 return;
             }
 
@@ -475,7 +494,7 @@ function PhysicsStep()
 
             let distanceSq = dirX * dirX + dirY * dirY;
 
-            let mass = blackHole[2] * 1000;
+            let mass = blackHole[2] * 2000;
 
             let magnitude = mass / distanceSq;
 
@@ -565,7 +584,7 @@ function PhysicsStep()
     }
     else if (state === SPAWNING)
     {
-        let angle = Math.atan2(circle.position.y - currentCheckpoint.position.y, circle.position.x - currentCheckpoint.position.x) + fixedDelta * 1.5;
+        let angle = Math.atan2(circle.position.y - currentCheckpoint.position.y, circle.position.x - currentCheckpoint.position.x) + fixedDelta * 0.15 / currentCheckpoint.radius;
         let x = Math.cos(angle);
         let y = Math.sin(angle);
 
