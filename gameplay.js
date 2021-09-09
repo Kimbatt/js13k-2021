@@ -71,7 +71,7 @@ function RandomPlanetColorHsv()
     return [planetColorRng() * 0.2, planetColorRng(), planetColorRng() * 0.5 + 0.5];
 }
 
-const checkpointColor = [[0.55, 1, 4]];
+const checkpointColor = [[0.55, 1, 2.5]];
 
 const maxBlackHolesPerLevel = 2;
 setBlackHoleCount(maxBlackHolesPerLevel * 3);
@@ -99,7 +99,7 @@ function LoadLevel(idx)
 {
     UnloadLevel(idx - 3);
 
-    if (idx >= levelData.length)
+    if (idx >= levelData.length || idx < 0)
     {
         return;
     }
@@ -110,9 +110,10 @@ function LoadLevel(idx)
      */
     function CreatePlanetLocal(data, isCheckpoint)
     {
-        let planet = new CSS3dPlanet(data[2], 0,
+        let planet = new CSS3dPlanet(data[2], data[3] ?? 80,
+            isCheckpoint ? 0 : planetColorRng() * 100,
             isCheckpoint ? checkpointColor : [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()],
-            isCheckpoint ? 0.001 : 1,
+            isCheckpoint ? 0.001 : planetColorRng() * 0.6 + 0.6,
             isCheckpoint,
             idx
         );
@@ -150,6 +151,7 @@ function LoadLevel(idx)
 }
 
 LoadLevel(currentLevelIdx);
+LoadLevel(currentLevelIdx - 1);
 LoadLevel(currentLevelIdx + 1);
 
 /**
@@ -447,10 +449,11 @@ function PhysicsStep()
             // const mass = 500 * volume;
 
             // fixed mass
-            const mass = 80;
+            // const mass = 80;
 
             // just use the radius
             // const mass = planet.radius * 200;
+            const mass = planet.mass;
 
             let magnitude = mass / distanceSq;
 
