@@ -1,0 +1,1 @@
+google-closure-compiler --js _script.js --js_output_file script.js -O ADVANCED --language_in ECMASCRIPT_NEXT --language_out ECMASCRIPT_2019
