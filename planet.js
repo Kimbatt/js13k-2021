@@ -56,6 +56,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
 const planetRenderer = new WebGLCanvas(planetShader, "numColors", "colorData", "planetRadius", "seed", "noiseScale");
 
+/**
+ * @type {(() => void)[]}
+ */
+const renderQueue = [];
+function RenderPlanets()
+{
+    window.requestAnimationFrame(RenderPlanets);
+    renderQueue.shift()?.call();
+}
+
+RenderPlanets();
+
 class CSS3dPlanet extends CSS3dObject
 {
     /**
@@ -85,20 +97,38 @@ class CSS3dPlanet extends CSS3dObject
             if (this.shouldRender)
             {
                 this.shouldRender = false;
-                const size = WindowSize() * radius * 2;
-                planetRenderer.resize(size, size);
 
-                planetRenderer.ctx.uniform1i(planetRenderer.uniformLocations["numColors"], colors.length);
-                planetRenderer.ctx.uniform3fv(planetRenderer.uniformLocations["colorData"], colors.flat());
+                renderQueue.push(() =>
+                {
+                    const size = WindowSize() * radius * 2;
+                    planetRenderer.resize(size, size);
 
-                planetRenderer.ctx.uniform1f(planetRenderer.uniformLocations["planetRadius"], radius / 2);
-                planetRenderer.ctx.uniform1f(planetRenderer.uniformLocations["seed"], seed);
-                planetRenderer.ctx.uniform1f(planetRenderer.uniformLocations["noiseScale"], noiseScale);
+                    planetRenderer.ctx.uniform1i(planetRenderer.uniformLocations["numColors"], colors.length);
+                    planetRenderer.ctx.uniform3fv(planetRenderer.uniformLocations["colorData"], colors.flat());
 
-                planetRenderer.render();
-                img.src = planetRenderer.canvas.toDataURL();
+                    planetRenderer.ctx.uniform1f(planetRenderer.uniformLocations["planetRadius"], radius / 2);
+                    planetRenderer.ctx.uniform1f(planetRenderer.uniformLocations["seed"], seed);
+                    planetRenderer.ctx.uniform1f(planetRenderer.uniformLocations["noiseScale"], noiseScale);
+
+                    planetRenderer.render();
+                    img.src = planetRenderer.canvas.toDataURL();
+                });
             }
         };
+
+        if (isCheckpoint)
+        {
+            let pulse = document.createElement("div");
+            pulse.classList.add("pulse");
+            this.element.appendChild(pulse);
+            pulse.style.borderRadius = "50%";
+            pulse.style.background = "cyan";
+            this.styleUpdaterFunctions.push(() =>
+            {
+                pulse.style.width =  (2 * radius * WindowSize()) + "px";
+                pulse.style.height = (2 * radius * WindowSize()) + "px";
+            });
+        }
 
         this.element.appendChild(img);
         img.style.transform = "translate(-50%, -50%)";

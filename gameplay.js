@@ -24,9 +24,6 @@ window.addEventListener("keyup", ev =>
 let scene = new CSS3dScene();
 let camera = scene.camera;
 
-(() =>
-{
-
 let particleTemplate = document.createElement("div");
 particleTemplate.style.borderRadius = "50%";
 particleTemplate.style.background = "radial-gradient(#ff6, #f52 30%, #0006 50%, #0000 80%)";
@@ -65,12 +62,6 @@ function CreateExplosion(x, y)
     particleSystem.createParticles(50, { x, y });
 }
 
-let planetColorRng = mulberry32(0);
-function RandomPlanetColorHsv()
-{
-    return [planetColorRng() * 0.2, planetColorRng(), planetColorRng() * 0.5 + 0.5];
-}
-
 const checkpointColor = [[0.55, 1, 2.5]];
 
 const maxBlackHolesPerLevel = 2;
@@ -91,7 +82,27 @@ let blackHoles = [];
  */
 let nextCheckpoint;
 
-let currentLevelIdx = 0;
+const localStorageSaveKey = "kimbatt-js13k-2021";
+let currentLevelIdx = (+localStorage.getItem(localStorageSaveKey) ?? 0) % (levelData.length - 1);
+
+for (let i = 1; i < levelData.length; ++i)
+{
+    levelData[i].checkpoint[0] += levelData[i - 1].checkpoint[0];
+    levelData[i].checkpoint[1] += levelData[i - 1].checkpoint[1];
+
+    for (let planet of levelData[i].planets)
+    {
+        planet[0] += levelData[i].checkpoint[0];
+        planet[1] += levelData[i].checkpoint[1];
+    }
+
+    for (let blackHole of levelData[i].blackholes)
+    {
+        blackHole[0] += levelData[i].checkpoint[0];
+        blackHole[1] += levelData[i].checkpoint[1];
+    }
+}
+
 /**
  * @param {number} idx
  */
@@ -103,6 +114,9 @@ function LoadLevel(idx)
     {
         return;
     }
+
+    let planetColorRng = mulberry32(idx);
+    let RandomPlanetColorHsv = () => [planetColorRng() * 0.2, planetColorRng(), planetColorRng() * 0.5 + 0.5];
 
     /**
      * @param {[number, number, number]} data
@@ -117,9 +131,10 @@ function LoadLevel(idx)
             isCheckpoint,
             idx
         );
+        (planet.checkpointReached = isCheckpoint && idx <= currentLevelIdx) && (planet.element.style.filter = "hue-rotate(-88deg)");
 
-        planet.position.x = data[0] + (isCheckpoint ? 0 : nextCheckpoint.position.x);
-        planet.position.y = data[1] + (isCheckpoint ? 0 : nextCheckpoint.position.y);
+        planet.position.x = data[0];
+        planet.position.y = data[1];
         scene.add(planet);
 
         return planet;
@@ -132,8 +147,8 @@ function LoadLevel(idx)
     function CreateBlackHoleLocal(data)
     {
         let i = (idx % 3) * maxBlackHolesPerLevel + blackHoleCount++;
-        let x = nextCheckpoint.position.x + data[0];
-        let y = nextCheckpoint.position.y + data[1];
+        let x = data[0];
+        let y = data[1];
         setBlackHoleData(i, x, y, data[2], data[3]);
         return [x, y, data[2], idx, i];
     }
@@ -188,15 +203,13 @@ arrow.position.y = 0;
  * @type {CSS3dPlanet}
  */
 let currentCheckpoint = planets[0];
-currentCheckpoint.checkpointReached = true;
-currentCheckpoint.element.style.filter = "hue-rotate(-88deg)";
 let checkpointApproachTime = 0.5;
 let checkpointApproachT = 0;
 let checkpointApproachStartX = 0;
 let checkpointApproachStartY = 0;
 let checkpointApproachStartAngle = 0;
 
-let circle = new CSS3dCircle(0.05);
+let circle = new CSS3dSpaceShip(0.05);
 scene.add(circle);
 
 const ALIVE = 0;
@@ -204,8 +217,8 @@ const DEAD = 1;
 const SPAWNING = 2;
 
 let state = SPAWNING;
-let velocityX = 2;
-let velocityY = -2;
+let velocityX = 0;
+let velocityY = 0;
 let facingAngle = Math.atan2(velocityY, velocityX);
 
 let cpx = camera.position.x;
@@ -240,8 +253,8 @@ function Reset()
     camera.position.x = cpx = circle.position.x;
     camera.position.y = cpy = circle.position.y;
 
-    velocityX = 2;
-    velocityY = -2;
+    velocityX = 0;
+    velocityY = 0;
     facingAngle = Math.atan2(velocityY, velocityX);
     circle.rotation.z = facingAngle * 180 / Math.PI;
     zoom = 1;
@@ -255,8 +268,20 @@ function Reset()
     UpdateRemainingBoost(0);
 }
 
+let started = false;
+function StartGame()
+{
+    if (started)
+    {
+        return;
+    }
 
-Reset();
+    started = true;
+    InitAudio();
+    Reset();
+    paused = false;
+}
+
 
 /**
  * @type {[() => void, number, boolean][]}
@@ -299,7 +324,7 @@ function Frame(time)
 
     let boostWasActive = boostActive;
 
-    while (accumulatedTime > 0)
+    while (accumulatedTime > -fixedDelta / 2)
     {
         accumulatedTime -= fixedDelta;
         PhysicsStep();
@@ -325,7 +350,7 @@ function Frame(time)
         boostActive = false;
     }
 
-    if (boostWasActive != boostActive)
+    if (boostWasActive !== boostActive)
     {
         boostVolumeNode.gain.linearRampToValueAtTime(boostActive ? 0 : 1, actx.currentTime);
         boostVolumeNode.gain.linearRampToValueAtTime(boostActive ? 1 : 0, actx.currentTime + 0.1);
@@ -393,16 +418,16 @@ function Explode()
     }, 1.0);
 }
 
-let paused = false;
+let paused = true;
 
 function PhysicsStep()
 {
+    particleSystem.update(fixedDelta);
+
     if (paused)
     {
         return;
     }
-
-    particleSystem.update(fixedDelta);
 
     if (state === DEAD)
     {
@@ -466,6 +491,7 @@ function PhysicsStep()
                     state = SPAWNING;
                     velocityX = velocityY = 0;
                     LoadLevel(++currentLevelIdx + 1);
+                    localStorage.setItem(localStorageSaveKey, currentLevelIdx);
                     PlayCheckpointSound();
                     boostActive = false;
                     totalBoost = levelData[currentLevelIdx].boost;
@@ -479,6 +505,21 @@ function PhysicsStep()
                     checkpointApproachStartX = circle.position.x;
                     checkpointApproachStartY = circle.position.y;
                     checkpointApproachStartAngle = facingAngle;
+
+                    if (currentLevelIdx === levelData.length - 1)
+                    {
+                        paused = true;
+                        SetFixedTimeout(() =>
+                        {
+                            document.getElementById("start-text").style.display = "none";
+                            document.getElementById("game-completed").style.display = "";
+                            overlay.classList.add("visible");
+                        }, 0.5);
+
+                        globalVolumeNode.gain.linearRampToValueAtTime(globalVolume, actx.currentTime);
+                        globalVolumeNode.gain.linearRampToValueAtTime(0, actx.currentTime + 4);
+                    }
+
                     return;
                 }
 
@@ -618,5 +659,3 @@ function PhysicsStep()
 window.requestAnimationFrame(Frame);
 
 window.addEventListener("resize", () => scene.render());
-
-})();

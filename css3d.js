@@ -105,7 +105,7 @@ class CSS3dObject
     }
 }
 
-class CSS3dCircle extends CSS3dObject
+class CSS3dSpaceShip extends CSS3dObject
 {
     /**
      * @param {number} size
@@ -120,78 +120,22 @@ class CSS3dCircle extends CSS3dObject
         this.circleElement.style.background = "radial-gradient(#0ff, #000)";
         this.circleElement.style.transform = "translate(-50%, -50%)";
 
-        let arrow = document.createElement("div");
-        let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.setAttributeNS(null, "viewBox", "0 0 50 50");
-        svg.setAttributeNS(null, "stroke-width", "1.5");
-        svg.setAttributeNS(null, "stroke", "black");
-        svg.setAttributeNS(null, "fill", "none");
-        svg.setAttributeNS(null, "stroke-linecap", "round");
-        svg.setAttributeNS(null, "stroke-linejoin", "round");
-
-        let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttributeNS(null, "fill", "red");
-        path.setAttributeNS(null, "d", "M49.071 24.025l-.994-.984c-2.625-2.442-9.001-7.328-18.013-7.328-3.334.001-5.334.429-8.556.888L14.07 9.164.071 12.848v4.007l.525.262 7.536 3.768v8.229L.071 33.145v4.007l13.999 3.684 7.436-7.436c3.213.451 5.22.909 8.557.908 12.016 0 19.347-8.683 19.347-8.683l.518-.613-.52-.614s-.115-.135-.339-.373zm-10.432-1.04A2.84 2.84 0 0 1 39.473 25a2.85 2.85 0 0 1-2.85 2.85 2.85 2.85 0 0 1-2.85-2.85 2.85 2.85 0 0 1 2.85-2.85 2.84 2.84 0 0 1 2.015.834z");
-
-        svg.appendChild(path);
-        arrow.appendChild(svg);
-        svg.style.transform = "translate(-50%, -50%)";
+        let svg = document.getElementById("ship");
 
         this.styleUpdaterFunctions.push(() =>
         {
             this.circleElement.style.width = (size * WindowSize()) + "px";
             this.circleElement.style.height = (size * WindowSize()) + "px";
 
-            svg.setAttributeNS(null, "width",  `${size * 1.5 * WindowSize()}px`);
-            svg.setAttributeNS(null, "height", `${size * 1.5 * WindowSize()}px`);
+            svg.style.width = `${size * 1.5 * WindowSize()}px`;
+            svg.style.height = `${size * 1.5 * WindowSize()}px`;
+            // svg.setAttributeNS(null, "width",  `${size * 1.5 * WindowSize()}px`);
+            // svg.setAttributeNS(null, "height", `${size * 1.5 * WindowSize()}px`);
         });
 
-        this.element.appendChild(this.circleElement);
-        this.element.appendChild(arrow);
+        // this.element.appendChild(this.circleElement);
+        this.element.appendChild(svg);
         this.element.style.zIndex = "1";
-        this.updateTransform();
-    }
-}
-
-class CSS3dCube extends CSS3dObject
-{
-    /**
-     * @param {number} size
-     */
-    constructor(size)
-    {
-        super();
-
-        this.sideUpdaters = [];
-
-        /**
-         * @param {number} mult0
-         * @param {number} mult1
-         * @param {number} mult2
-         * @param {string} rot
-         * @param {number} angle
-         */
-        let createSide = (mult0, mult1, mult2, rot, angle) =>
-        {
-            let side = document.createElement("div");
-            side.style.background = "radial-gradient(#00f, #f00)";
-            this.element.appendChild(side);
-
-            this.styleUpdaterFunctions.push(() =>
-            {
-                side.style.width = (size * WindowSize()) + "px";
-                side.style.height = (size * WindowSize()) + "px";
-                side.style.transform = `translate(-50%, -50%) translate3d(${mult0*size * WindowSize()}px, ${mult1*size * WindowSize()}px, ${mult2*size * WindowSize()}px) rotate3d(${rot}, ${angle}deg)`;
-            });
-        };
-
-        createSide(0, 0, 0.5, "0,1,0", 0);
-        createSide(0, 0, -0.5, "0,1,0", 180);
-        createSide(0, 0.5, 0, "1,0,0", -90);
-        createSide(0, -0.5, 0, "1,0,0", 90);
-        createSide(0.5, 0, 0, "0,1,0", 90);
-        createSide(-0.5, 0, 0, "0,1,0", -90);
-
         this.updateTransform();
     }
 }

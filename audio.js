@@ -48,15 +48,8 @@ function CreateBufferWithData(audioContext, length, generator)
     return buffer;
 }
 
-let once = false;
-function Init()
+function InitAudio()
 {
-    if (once)
-    {
-        return;
-    }
-
-    once = true;
     actx = new AudioContext();
     globalVolumeNode = actx.createGain();
     globalVolumeNode.gain.value = globalVolume;
@@ -108,7 +101,6 @@ function Init()
     }
 }
 
-document.addEventListener("click", Init);
 // document.addEventListener("keydown", Init);
 
 /**
