@@ -282,7 +282,7 @@ function StartGame()
     Reset();
     paused = false;
 }
-
+window["StartGame"] = StartGame;
 
 /**
  * @type {[() => void, number, boolean][]}

@@ -1,109 +1,0 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-<meta charset="utf-8">
-<title>title</title>
-
-<style>
-
-body
-{
-    background: #323639;
-    overflow: hidden;
-    color: white;
-    margin: 0px;
-    padding: 0px;
-}
-
-#scene
-{
-    position: relative;
-    width: 0px;
-    height: 0px;
-}
-
-#scene *
-{
-    position: absolute;
-    user-select: none;
-    pointer-events: none;
-}
-
-#overlay
-{
-    opacity: 0;
-    transition: opacity 0.25s;
-}
-
-#overlay.visible
-{
-    transition: opacity 0.25s 0.5s;
-    opacity: 1;
-}
-
-.planet
-{
-    transition: filter 0.2s ease;
-}
-
-.pulse
-{
-    animation: pulse 1.5s ease-out infinite;
-}
-
-.arrow
-{
-    transition: opacity 0.2s linear;
-}
-
-@keyframes pulse
-{
-    0%
-    {
-        transform: translate(-50%, -50%) scale(0.8);
-        opacity: 0.7;
-    }
-    100%
-    {
-        transform: translate(-50%, -50%) scale(1.3);
-        opacity: 0;
-    }
-}
-
-#start-text
-{
-    font-size: 11vmin;
-    pointer-events: initial;
-    cursor: pointer;
-    transition: visibility 0s 0.5s;
-}
-
-</style>
-</head>
-
-<body>
-<div id="ui" style="position: absolute; width: 100%; height: 100%; z-index: 10; user-select: none; pointer-events: none;">
-    <div id="boost-container" style="width: 10vh; height: 5vh; transition: width 0.5s ease; position: absolute; top: 1vh; left: 1vh; background-color: black; border: 0.5vh solid #333;">
-        <div id="boost-bar" style="width: 100%; height: 100%; background-color: red;"></div>
-    </div>
-
-    <div id="overlay" class="visible" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; background: black; display: flex; justify-content: center; align-items: center;">
-        <div id="start-text" onclick="StartGame();this.style.visibility='hidden'">Start</div>
-        <div id="game-completed" style="display: none; font-size: 11vmin;">Game completed!</div>
-    </div>
-</div>
-
-<div style="display: none;">
-    <svg id="arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" stroke-width="0.5" stroke="#030" fill="#0f0" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M2 2L6 4L2 6L3 4Z"/>
-    </svg>
-    <svg id="ship" style="transform: translate(-50%, -50%) rotate(90deg); filter: drop-shadow(0vh 0vh 0.4vh #0cf);"
-        xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 180 285"><defs><linearGradient gradientUnits="userSpaceOnUse" id="A" x1="560" y1="422.5" x2="740" y2="422.5"><stop offset="0" stop-color="#222"/><stop offset=".3" stop-color="#333"/><stop offset=".4" stop-color="#333"/><stop offset=".5" stop-color="#666"/><stop offset=".6" stop-color="#333"/><stop offset=".7" stop-color="#333"/><stop offset="1" stop-color="#222"/></linearGradient><linearGradient gradientUnits="userSpaceOnUse" id="B" x1="610" y1="407.5" x2="690" y2="407.5"><stop offset="0" stop-color="#ccc"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#ccc"/></linearGradient><radialGradient gradientUnits="userSpaceOnUse" gradientTransform="translate(162.6 105.6) scale(1.19 .82)" id="C" cx="409.65" cy="434.55" r="82.01" ><stop offset="0" stop-color="#2de"/><stop offset=".1" stop-color="#2ac"/><stop offset=".3" stop-color="#245"/><stop offset=".35" stop-color="#222"/><stop offset=".6" stop-color="#666"/><stop offset=".9" stop-color="#222"/></radialGradient><radialGradient gradientUnits="userSpaceOnUse" gradientTransform="translate(162.6 105.6) scale(1.19 .82)" id="D" cx="409.3" cy="225.59" r="45.73"><stop offset="0" stop-color="#3de"/><stop offset=".2" stop-color="#bff"/><stop offset=".45" stop-color="#0be"/><stop offset=".5" stop-color="#4ce"/><stop offset=".52" stop-color="#222"/><stop offset=".6" stop-color="#444"/><stop offset=".7" stop-color="#666"/><stop offset="1" stop-color="#222"/></radialGradient><radialGradient gradientUnits="userSpaceOnUse" gradientTransform="translate(162.6 105.6) scale(1.19 .82)" id="E" cx="397.15" cy="288.14" r="4.14"><stop offset="0" stop-color="#bff"/><stop offset="1" stop-color="#0be"/></radialGradient><radialGradient id="F" cx="422.46" href="#E"/><radialGradient id="G" cx="377.66" cy="455.34" r="6.92" href="#E"/><radialGradient id="H" cx="440.94" cy="455.34" r="6.92" href="#E"/></defs><g transform="translate(-559.73 -279.75)"><path d="M725 465c-14.86 0-40-25.88-40-30 0-14-5.19-47-15-60-3.76-5-19.83-16.81-10-20 2.91-.94 15 0 15-15 0-31-15-60-25-60s-25 30-25 60c0 15 12.09 14.06 15 15 9.83 3.19-6.24 15-10 20-9.81 13-15 46-15 60 0 4.12-25.21 31.48-40 30-10-1-15 75-15 75s10 0 25-40c14-25 25 0 25 0v65s6-26.65 25-25c6 .52 10 15 10 15h10s4-14.48 10-15c19-1.65 25 25 25 25v-65s10-25 25 0c15 40 25 40 25 40s-6-75-15-75z" fill="url(#A)"/><path d="M665 370c5 5 5 10 5 15 0 4.28 5 30 5 30s-1.7 5-10 5h-30c-8.3 0-10-5-10-5s5-25.72 5-30c0-5 0-10 5-15-40 25-20 65-20 65s.78 7.53 15 10c1-4.9 39-4.9 40 0 14.22-2.47 15-10 15-10s20-40-20-65z" fill="url(#B)"/><path d="M695 455c-20.74 0-25-10-25-10v30s-1.59 4.41-20 5c-18.41-.59-20-5-20-5v-30s-4.26 10-25 10c-.59 7-2.14 16.55 0 20 2.72 4.38 20 10 20 10s-2.43 22.92-1.64 30.69L625 530s15.58-4.4 25-5c9.42.6 25 5 25 5s2.59-11.38 2.89-14.31C678.67 507.92 675 485 675 485s17.28-5.62 20-10c2.14-3.45.59-13 0-20z" fill="url(#C)"/><path d="M650 285c-5 0-15 15-20 35-2.43 9.7 0 20 0 20l5 5h30l5-5s2.43-10.3 0-20c-5-20-15-35-20-35z" fill="url(#D)"/><path d="M630.74 340.68c-1.94.07 0 5 5 5h5c2.31.08-4.91-3.4-5-5s-2.86-.08-5 0z" fill="url(#E)"/><path d="M670.46 340.68c-2.14-.08-4.92-1.49-5 0s-7.32 5.08-5 5h5c5 0 6.94-4.93 5-5z" fill="url(#F)"/><path d="M605 475c-2.39 1.59 2.66 8.37 5 10s7.69 1.65 10 0-2.84-3.13-5-5c-1.91-1.65-7.8-6.47-10-5z" fill="url(#G)"/><path d="M695 475c-2.2-1.47-8.09 3.35-10 5-2.16 1.87-7.4 3.28-5 5s7.66 1.63 10 0 7.39-8.41 5-10z" fill="url(#H)"/></g></svg>
-</div>
-
-<script>
-eval(Function("[M='NjQTBcmi]NMGiDOtAcWDLdxh?j_nsh|OyULVTH}S^U@PhrKKIySCmSdJWzHQ~QIk_jlH_TixmDMwyoBkAj^_yN{|PiVVmBhyhECQRRtQd[tH^{NdBTilQY]pNS@XcAhfJN^CsTnxnCgqCHBbFrFF@VkcH?kpyGaEovnXeG`flXb_Bmmgh}jF?C`|ENAQd`^Gat|ykuiXBB?MWrL|@tpCeyPTJnXapOYSbNFQMG@~_b?Qevjod?`UfCgWMCetwvUzz`rMJAbqvfzKRXUf}MXboYCkS`qh[}EVAZthqAM~mxJ{[Mpck_S~wrDiUrDLmkI`UWyAO}LjNABsTNPkSzK}qZE]XE^|{pNun{yJnxlcuiD]BpB^ArwGv_j}R`]_t@_MM^ATDF}dJ^MkwTJ^TfIpEweLzdytYCmggrJF|OGOk]LMOJDFrV{PeVgZIcYJZynk~HofdCDJtakeNMIISAzrPag`i?GdXbvlmq[tk_`OIo`QSmVfHezbceXDjZsaof}nPRCbcQzeITCNcgo}LuQfyFUhmlpu_aARGFAOqXmoifvSUlWypTuISEe^AD|MhlRKTsVkPWYG]FboOeRc^fN_QkQCRgi@UjHxZkO~A^x^IRqP@CajZMUQzVYNchZQq?ZJiiXdoDQfe]R@}RKybEmMpxVQ~oeUwbIcv?AU`poZncBK_ubpHTOywG[xD{x@lHtS?YAfFQkVKb}JJWECuuVV^zdLh[Ri`gZfjcEo}TiZIhPKBu^amqzESWbo}B}dzeZYvoVmZ~WsPP{GxiHx^ZsxYlRemMnkO^qAG`ZOT|hDFSaa|efGEL]yfo^DKbIHYZUhqBVHHLwDbyNXYl?cIm{kXSlqKMQItYsh}eJOi}|BqbsQjzyg|q}LdvQW`AczL[M^n^qb}sZO{BQfzcW~?mJxVZCHJ}UDCDBE?T[VMhO|LvhtZPTV[NlpTdPXR]LQcfyAOERHJNuYeEc_BFe|aQN^M^KcEiaIMHCw]ginOWMGFbzFAa{RtiS}fSgCqyr^rG?[L}eJzFMo_CJ@QTXSKjmxUNAwu{U?DBBe^p}nRc^KCU}qxy}{}nw@sV@Fucu{iwBXQO`gCsh_KnUz}JeDYXdKjxLMdfKJuJPkVxI`lT_Oi|jmImztRjDhKP|IBtGUbHM_|uL]eQaHj]auafS@pLm~?Vss?e^~SDOM_ol|hkQuMtieAntKqWwu`|KLeZul{aYwHxW_dLqU`[fRGj~qZ|Lct~JpmKTPbVRyeqROzPMFG_P_Gmc~NNXhWUO?XCDEeyCuaZsA|N|TIgv}mcMRjFK~sO|QFHi|tGyizEVOJ[Yz}|xbt@Ff`u}PQrwS`GyCX[rCeuKVX|SwXeuuq`oFMTUlzcojZjrZna]ncMi^kikiN}]m~rmW~P_NiZ?]pwUzrCdfIfIW_PgcmLiyfKa[pGqbHCxVtCFNxB`_UKxDWexQxBdwAv|?JpGUtJY|PijoSR@kgV~}GOXU|{BNN]SxXK~jjcUpfrgdPYT?htPtsX]sL~|FVzY@Np@gkHxY@fddQ{ng`JryjNhXsq@hKlvG]NUM^_Qw|AxgY_k`h^MQymUar{}ygJdDaSmNu_VrkOLk~yw^rCwCcCeDKQokH}TebmX{y@vX?_WAzq_EERlVVnuFzOm}rahXBXSXZQ]AeDs~sshjbl}pCRzDmudbr[QGGRn~O^X?]Sbj[i^zEdtbzwiZte_QLlGChZUmllmGp^Gd@FhdDOjTXXiDCzjSuj_vBE_VVNPuOgelVQRrmzOw~KQSjVUhLZMmrene_B?}ofXDP]~_]WMPLNhlUPbO?goCcTZliahbDefW}TWZeUb?iUKn]EIkRmjddbjOQexHAv_YSGkMvt@z[xAFFGqNRTlc?vCM_vTDn[hg|QHeGnbD?fmzb~ubo]C@@EndUPNipkRKYvW`U|HiLURjE`jphHHGn~Phh{JbiYKHycG|W?Ltl|QKGqgBAwt?Xw@JYTi[^A[S~z@OnXkIN|[OMP`abC|irlOOt^odlgymX}TBAaPIuw{XMCtfWZF{lYotObggQ{{rE~}{A?MI]DJqEvCMMLu@vt|lh}?OVtHraZaegCcfCuAHbWVGHgdAdmL[FgEJgDSYOa]g?]Qlb|x|yejrG[kBpfyB]qIlpd@vlNkmMaS_Z|Z`LQerMLltfwQ|^LxKkf^|ssN{@Gp_eqpLRTBQL^ui[lD{JQR`|NrYdzt|FekV_PD{lWva@LrQBUs_LPFsplVxHrlBiz{cjtHNWexOyE[RlOcNBVmZHW|c[JQqw[IT?{CPxq[FuB{VXMzuXbJAMIFOaxeo|bjHT]OyBQS_EugJMSY}P`oO~pgu^rie}dmMlOurFrMnO|wY}_Fd`i{XBd_E|LZhsRxQbrWqYJxFeLPPlimSSzIsyRRr^gwArSGrT[?hSiegrreYXjpqNgtrLNzk{AVZSulpng{MrtTPrlMxmVQQOhBBVklR}iZ_tDkyzLa?qblImiMjCYWa?hp~bE^vJgZ?kQUWDbypMhBideDBDctfSeFDh?EOFjMqO}XVHfEDVlDCVNWOcNTTpNLOBHeD]~cPpkME`g_oaEv^s{|gF]WARcMq}GQXggQE~afiqU}@FQ^`@dbJb_t]x|u`vb@jBEBzGdh@BnvqJgyT@Ig@^uFF_^yitUOePe|U?kNDyu{n{pmjRTpcRSTGJokhim]OlnVlg_tShBx`fNy]HlngY`s}smAd`yRYieQxyf^~fAqAGnu|qOEeSlFHcWOdZY`kkKefSV@h`VCQHnSivKHZJnOeUQ`ASZZK`JHrwxMLsA|sCraH@hEyEqM~qeiOdEjm]NqTmrbL[Ym[RKIDQo~v{GNt{B_@TuZcC_c^dLPyV`SxiY@AZ[HMcv}LnAKOVHiSLhGzJzdX|^OeAMIbccPEiR[FeCyCngezOOvE@~TuhLv{vtoVfgHzZKb|w@HFXDJMW?AuGstdx[cAc?IXvVBr_{j[julYmSMWpQiLnhc?]n_|HbxhL_R_~cZSyAjYJogJVlGG]vxHUDushqFpQc~Wt^jBGxMsf`kP]uVmcferCcu^GlYRMK}ianppU_uAtT|GGONZBDGcO{kQkqwPl?avz^KRCYjzTqjH~y[Wum|Eu{Z]VTNSTunNA}~lDVCD[BLj]IhfhcDtreah^}XaZ|LWnXKcf@WHAbxYvuBhePfjhrvWJ_|P@M@IATT`K{_AqYXL_QOGCYstzCmw|KMw{COQ~DoDBxjv@fupWsTMUY}gngYzv]`^kcSMpYMZoz~FTaGnEl`rPCxngASKHZ{@_BsK{XR}AdeKPOvIQJ^nxozAzx~]fouFc@O?{O`qRZ]ztc~vUFfc{jYSH?dNlNtGGz~zDlazQ{UEVq[lM^XOSYrhIC?WAu^eCTOVAhfbbfegjX_BnhqlRfajtzLSpnYK`hzzj{GvUxsK^yeLKgINRfWWiqCKYJJEOYe]LbMYERhu{oerrXfQXxYJiDsQWw?_JyDkGAimr|[asxQG^MUO?~dYKdAPY^Q`}m@BWWr@CX_fd@bBqfhyEFYnhxqq]ubOGSnBTU?XpS@fewkDhFvcinB`vaNBhHbOHmw_aLno[o[gb]MxyPL@xOt_ngbgV[vY~twxHQirToR~dENgb}YytSdfdo@avZovVjTxiD|u}_pML@PhLQ@X^yachx`Q@rmqsXGlEj@saYXEtkk|ZV^MAFJn}E|OI~ZhwPxKUd[T?ArIQkgufkoBuQhkPHTqr{Aud?Dk`aExrIQiy^k^ueS^ERSp^HTavRHP`[U@[ugSsI{GFL^EiMocteWTmeX`ZYa`ulOybQ`F|fULr^s^jXi|w]liBC?_T[cWgLblgdGCADugw@l^v{Wzn}ZhTm}SqgkqVkmmyRrywXCygb`GOKBzH@}yb|xn[d{eQnQQ[ZtYB_`yqZyUY[U|hAGkxwpN|tDuaL{UH@[fBFEKqlOCzekvCpue|KPanDuG[wyFkjgKLsUeHlPtkfvxSxxCIzqnIpM{Pw[cuCHsivr@vAGTtuzWkzfpWYPbwbIK^qleLcCC?SubK_U}PUMtdLPp^zRILpDHgRlXkQCAXWl~OgWtpOYZn]Hd^pDLjbZd[YymQGRyFbjWA`MX~]Bb^k`aH[ca[Ul^pYEjcznXpVEzFUoDH|uZ}c`|i_MO~rt]cPadePU^P]TAuUjuWyUtlVegbtTAt}yMrV|EfpA{^wz{T}]ReosgNH^tO[RNEbvAX`W}aKP~CHrUm~g?sxN_Qmya?{x`|o?q^^d`gqav{Wi[EpMYi`KU|^eyFlrQEvXXPfgXexjjbIji^jhsks[HkL}fDUUEWT~YU?WelBM_Ah^JgZ@ERZWwDsuKJfsL?eqn}QoQiZDh}qhtTzs@|{Bwaa_gUAuVo@?r@vib{wNMF^gbObinO`mPIaIe|cgmmA?Np{sLBbUMrYdtP@AVfe?jAXrN^^@vg_f?zebdpmjPYeGQF}SHyliY?cF}rydakfvwIGjbPvJKaBu_r^ZZuQ[z]]B~]AG}j~}bgCG{YERniqfXTyeP?fs{k_v]sHGPjjIfOAwyPS@F@tZ`QptZ?NkaSYU}w@Kxk^btvWpmUxx}xU_dHbSCjE_UVRpU^VbwfqK?xExPBOB}rZFGZZNMup|seP~LfH_pPetBxt@vfGcQEafU{I~xWaRC^BV`DTjMkwEXIp{i_F@{tcgiCgXxbtJBWagiaCvJqRP[FHyVQ_GUUzcbNsfTmq_]gMXfrX]HAKcja[YVPKi{GDdXxkLIaLwKcuyp_GZSf]rfoF_nFKkrQFlyK`aafwuyzgNi[VPSs`QR}addCVkzFHHJ`KvWIZsFWADvATS^@RXWni`JXLyPHcZPFr~@wvmj@QCJ}~SapVyjlihf~NhtGNZyjQYLVwJxZO^vD[Rr`n@``P~TDtt^maizRoZo}?c@w|@|fmC]Xe_zQlT~dduX@OPi?StZCPn]S|[^?lyx[VUm^_KWzdzo[eqghrLSaNy`xJJmVAZ]epUO{v`Gc[|B@qWzbiftYt~vc|YAQ^xFb}?QALceD[kRMF@infYY^col{iK]LqIaRmRxR`cRLYsnbxwysu`NbpXRtMDJFGczG`NyviXSKL~]_m~QgeCkTLNxuvKwposaxu{_wXeYPKBGGJ[fn`QdA?wcOdLw_}lzJ{d`zoepXpslpgeV?|N|pZSXWNzqfs^oBxGAt{cXtTAW[UcqjCcVAa@ZLxA``r|cC]xynDBr_k_w]OybhBn}QiFemyRLU~guIUus@Nl[~OeOwqtRNb[GM]B|xpuTQxcSbEDUl}Zq|RgAc|_Dt{~SR{AECNbFF]bkPiCdju@Dyxe{f}KkbObhategA}REh|duPUZ_e}fkiQBlDvgvEoWmZvKlYF]CXUtofZaBM~b|}KIKXhc?XEh[ZJuDcpNMn||`TJJEU?UUK@ERr{vxrQP|z`rgKRTfPxI@DVQSl]vzSnNcB@yk?EEw]hRE^VAxOP}EfYUx`GygQyX~vXAE|nuuFVhE@nc[}cCxKWuQFO?T?eTOAZVmLeUcDhYvuWv`jN]X][GH[wwEzUhpKuXB}iletUyCWeSdKKuSxSpOrwSjJxy]jfOpTu|Gc@xGpHWD?J`ImFkWtZQVb[fBE@}UFnfaVW@t?L`cJiwN{tE`EerVs|vjgurIaUNRidTJeOgA@iwv`A{tUyauxYsnlU^w`_xxuFXthbiucrHOrTpYilEMFqV}]UCwoh]vEqu{_B?k^IMxSaSq|IzfIcVGG@Zu`YR|KJpPOBwlR]cLr}h{}zTgDy_?kSsDNutxa|vlk|JTWTUFxLcOFmlPHO~NN[}zJhOB|K{d~RonjK]DM?MImnKMFPEm_RCCQ`mbbJPfj}HgKc}PekUUlEHtW`Y]P{jK^gyGfV{pQq^@yUrT@Au^pRw{c|gh`DJqcD@S{WM[eJd]CbYAjdHM|d[xSkbST^QnJl_XBrcALOABhWx|{ZfdciC`W@dL|SBcHiD[IxoTo`Xw]GEHP}L]M@E_]tuAylWoJPsKh}tL`MIrzWejOdelBstDC_ADBgaY?VJR??cQUA^oz}KrfD]_OraGVyDdYDitS}TWATFMxFVYhqWd`j?rhhMEyV_Mu{JoL}v@}NIGzmDUCaDiD}lAGwk@bdWCfj}|tH__VPImbFc_SWWZXvb_@dN@zCkcsJf[Q^JWL|KuG{vrHKUxAmV`gfT}rxzZiAXq[mBrv}NON~H~]?Ob`MZWgFwKaORjsAyhvgGuchp}vMX~Iq|vrfEVdbHXUJu{NR|fv|cncanlEOLNjc~{H@upj[Hh[xOiLjEm}k?T{^JxRAWZH`]`nmD{{zkWaRz?@_Ugv?K~OOAR}DBQnOeDQsxglICheoCg}kTECuvb@pYGQnVY]`SQ@wVoTDpNaDKdldYFdFbrzlWLg_fIXlGLTgrHb_LGBfiP@uqh[unD@a{CulLZn_N^zLaHslsc~b[pE{_@XhU@wZa{mW~mUZVi{i[okU]VHn~yoyqUSsQy{SlhdTRiFCtbQ}Q{[DhbbcGPSuBigKThUjACwRm_Wa[_L[oOWqpCb]BfG`lrLh|^BavA]TgRA@kNaCG}ETeWLVckoiyKb@SgHIvk`pEjAe~e[RtAiJWlHj}ZDs~hxitCNf}|zUy]vG]W@]~d|]]FYurbJ]~re{MyVRuyogCGU?WkzANtaNSQZQmA]]?ndi~KVsjQchUd[RcbiYgIl?PcxGGGNUjfwZYcN|`mQgRxpHK}ipYM^VEckaHDowcenKnZwsQQMUxgcJOn{QtSdK?Pz]EVeT_w@oPvnvFEqEJFSQWQKhIaLbxzv[?@AbZphKKGYubxuCrBFHYCeG?iMWCZfb}fIe_qE_[@pVok}xpiUD`rKS[pMspGoHkyjep~^CMwAhxiLABxmHTvg@XyXQCvg]PxdnBSa[dk]ysNxdQZY^IPDf}DeGp{LZ`yiO[mwUnGdlAaH|JLi]CP]nUMGI[xEWYzxBJQo[EgKpbfdJ[tdAYlwrcysb[vH{~RMqQAH]bxHOD|mFhadQ`Q_oXumsa[QHUDY[QgGdNu_DqEwsnUJ~Ujzljwdz_Z~@z`MJVFjDP`YdvnsS`mAhG}?qZqmtcoC@LmAKK?`OCJpBkEH~}spLdlTazOsXNOASRDtvuDwVz@X@PDYjJqlYy|gL`W@`n@PKnazCPkBXs?`k^~xw{DGOUpEAegFXbuXmIB}KmfZzGvAoHoeS{}gS{M[FBweYcnOwOFJv{mKjtiE[~^WPq{SSm]]Wm^d_U[?sMHKQrQqjCy]gUFczx`^GBV[hHcL@T_BSjqgtetUVA^IlQH`PBkmTh?[QKZT~iUshKu{qx`DXqnBvrliUf@onl?sx^YrwuB?ZgDxp~^zsJkLk`?vNEjjlUCktW@`tunLXpA~FcT{oYqGni^_rAUn[spHP~]jXW|LuTvFftsaahkJq}LEmuQ]NLzs{fm]mDJbfbTGg^m~@eS[NElgl@lZF}rbLRlXJxQZ}xgCTFtpAmCoWdO}^s~[{UTqEpk_m{mpkUcyevuEtjHxzkblPIetKs?CHnqYTB{URTbrxQ{]otPzdkYI?k`XeG[UXoQBBiuyKuBazact`Vls~J|LzTFG^ZRFsoSv_axqqZVf_T?{H{mEoxfPSHpAtMIuMQYQWDT_OrZtlh~kQzrCu_UyZzji@}mR?Y|Uy|]?msMXzLCDIF~QpESv`mneBQBkA~dBfIaA|{M~TgNwtohLHC?ghes_NRnbJ`mZNfPUIE~SLXAS]Rxgr^Mqg?{yKjQlRxJp?axLgasAQrZWeQ[{V|BLcK}Rvt}NgUK@Ue|c|CQLy]Bl@ci@ZXQrWdmhy}TzesOL`bKrDFpEkwoHL`vmzBGbDx^KZrvYb[dcuxw@HiOoEic[?kChjcnATjmE@zeMkZ^RhIhcU[TywPazCZceWGBfgOItNSNfeIgblqgZka_uSKqtC_@gvi~t~N]lpbRG?_}iRftFWRUZvZnw`J|j[v~kldf[hjnyAuK{Fn[hs~lpwOLHmhu`XDNvCOVVcYEdM`uigoAEsFBeFVfpBuMmznfs]?xkQ]^pPbg`[pBjBmzI`QnFNUBjUntv[~aDby__YpmuMZC^NoEkhpK@mNfVHIGC[wGI]IsJVb^DO`etQWDUQ{HNB^cjH{lH|@stbfKcqrPtukb|PfBEac|aQMF]NaPfDFR~mhXI^P^OoXym|YC{YQMy^O]CSSnbjBpg~HG?tpUqAy}dgYKeJofQYVPvnH@ogZmI@gTGWjF[DbDgaOOFk`b@JwWEL^IUzfiJuSqzIMaiJLFzqymGoB`lpuVSmDUuHFMuzaWrs@n^nGLxTSc]JRX~iOTTu'",...']charCodeAtUinyxpf',"for(;e<16144;c[e++]=p-=128,A=A?p-A&&A:(p==34|p==39|p==96)&&p)for(p=1;p<128;f.map((n,x)=>(U=C[n]+=(i*a/2-C[n]<<15)/((o[n]+=o[n]<4)+1/12)>>15,r[x]+=y[x]*(i-t/a))),p=p*2+i)for(f='010202103032104310432064206510743109875'.split(t=0).map((n,x)=>(U=0,[...n].map((n,x)=>(U=U*997+(c[e-n]|0)|0)),a*128-1&U*997+p+!!A*129)*12+x),y=f.map((n,x)=>(U=C[n]*2+1,U=Math.log(U/(a-U)),t-=r[x]*U,U/930)),t=~-a/(1+Math.exp(t))|1,i=h%a<t,h=h%a+(i?t:a-t)*(h>>15)-!i*t;h<a*128;h=h*64|M.charCodeAt(d++)&63);for(o=String.fromCharCode(...c);C=/[\0-	-]/.exec(o);)with(o.split(C))o=join(shift());return o")([],[],20321122,1<<15,[0,0,0,0,0,0,0,0,0,0,0,0],new Uint16Array(12<<22).fill(1<<13),new Uint8Array(12<<22),0,0,0))
-</script>
-</body>
-</html>

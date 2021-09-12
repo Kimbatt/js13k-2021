@@ -103,15 +103,15 @@ body
         </div>
 
         <div id="overlay" class="visible" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; background: black; display: flex; justify-content: center; align-items: center;">
-            <div id="play-text" style="padding: 2vmin 5vmin;" onclick="this.style.display='none';document.getElementById('controls').style.display='unset'">Play</div>
-            <div id="controls" style="display: none;">
+            <div id="controls">
+                <p style="font-size: 4vmin;">You are on a mission to colonize planets in the nearby system.<br>Search for habitable planets, but watch out for the dangers of outer space!</p>
                 <p style="font-size: 5vmin;">How to play</p>
                 <p>Hold space to accelerate</p>
                 <p>Reach checkpoints (pulsing green planets) to advance</p>
                 <p>Avoid hitting planets and going near black holes</p>
                 <p>Pay attention to your fuel:</p>
                 <ul>
-                    <li>You can see the remaining fuel in the top left corner (red bar)</li>
+                    <li>You can see the remaining fuel in the top left corner (blue bar)</li>
                     <li>If you run out of fuel, you cannot accelerate any further</li>
                     <li>The fuel will be restored when you reach a checkpoint</li>
                     <li>Different amount of fuel is available for each checkpoint</li>
@@ -119,7 +119,7 @@ body
                 <p>Press Enter or R to self-destruct, and restart at the latest checkpoint</p>
                 <div id="start-text" style="margin: 5vmin 0px;" onclick="StartGame();document.getElementById('controls').style.display='none'">Start</div>
             </div>
-            <div id="game-completed" style="display: none; font-size: 8vmin; text-align: center;">Congratulations!<br>You have completed all the levels.</div>
+            <div id="game-completed" style="display: none; font-size: 8vmin; text-align: center;">Mission complete!</div>
         </div>
 
         <svg xmlns="http://www.w3.org/2000/svg" onclick="ToggleMute()"
