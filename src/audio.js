@@ -8,7 +8,26 @@ let actx;
  * @type {GainNode}
  */
 let globalVolumeNode;
-let globalVolume = 0.5;
+let originalGlobalVolume = 0.5;
+let globalVolume = originalGlobalVolume;
+
+let muted = false;
+function ToggleMute()
+{
+    muted = !muted;
+    let prevVolume = globalVolume;
+    globalVolume = muted ? 0 : originalGlobalVolume;
+    if (globalVolumeNode)
+    {
+        globalVolumeNode.gain.linearRampToValueAtTime(prevVolume, actx.currentTime);
+        globalVolumeNode.gain.linearRampToValueAtTime(globalVolume, actx.currentTime + 0.01);
+    }
+
+    document.getElementById("muted").style.display = muted ? "" : "none";
+    document.getElementById("not-muted").style.display = muted ? "none" : "";
+}
+
+window["ToggleMute"] = ToggleMute;
 
 /**
  * @type {BiquadFilterNode}
@@ -141,9 +160,9 @@ function PlayExplosionSound()
 
 function PlayCheckpointSound()
 {
-    Drum(0.2, actx.currentTime, CreateNoiseNode(), true, 1000, 2, 0.01, 0.05, 0.1);
-    PlaySound(555, 1, actx.currentTime, 0.1, 0.01, 0.2, 10, "sawtooth");
-    PlaySound(66, 1, actx.currentTime, 0.1, 0.01, 0.2, 10, "sawtooth");
+    // Drum(0.1, actx.currentTime, CreateNoiseNode(), true, 1000, 2, 0.05, 0.05, 0.1);
+    PlaySound(555, 0.5, actx.currentTime, 0.1, 0.01, 0.2, 10, "sawtooth");
+    PlaySound(66, 0.5, actx.currentTime, 0.1, 0.01, 0.2, 10, "sawtooth");
 }
 
 /**

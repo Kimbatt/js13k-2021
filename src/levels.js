@@ -10,7 +10,7 @@ let levelData = [
         blackholes: []
     },
     {
-        boost: 2,
+        boost: 2.5,
         checkpoint: [2, 0, 0.1],
         planets: [
             [1, 0, 0.3],

@@ -153,8 +153,8 @@ class CSS3dArrow extends CSS3dObject
         let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svg.setAttributeNS(null, "viewBox", "0 0 8 8");
         svg.setAttributeNS(null, "stroke-width", "0.5");
-        svg.setAttributeNS(null, "stroke", "#030");
-        svg.setAttributeNS(null, "fill", "#0f0");
+        svg.setAttributeNS(null, "stroke", "#0cf");
+        svg.setAttributeNS(null, "fill", "#bff");
         svg.setAttributeNS(null, "stroke-linecap", "round");
         svg.setAttributeNS(null, "stroke-linejoin", "round");
 

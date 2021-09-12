@@ -12,7 +12,7 @@ window.addEventListener("keydown", ev =>
     keymap[ev.key] = true;
     spaceDown ||= ev.key === " ";
     spaceJustPressed = spaceDown && !ev.repeat;
-    enterJustPressed ||= ev.key === "Enter" && !ev.repeat;
+    enterJustPressed ||= (ev.key === "Enter" || ev.key.toLowerCase() === "r") && !ev.repeat;
 });
 
 window.addEventListener("keyup", ev =>
@@ -62,7 +62,7 @@ function CreateExplosion(x, y)
     particleSystem.createParticles(50, { x, y });
 }
 
-const checkpointColor = [[0.55, 1, 2.5]];
+const checkpointColor = [[0.25, 1, 1.5]];
 
 const maxBlackHolesPerLevel = 2;
 setBlackHoleCount(maxBlackHolesPerLevel * 3);
@@ -83,7 +83,7 @@ let blackHoles = [];
 let nextCheckpoint;
 
 const localStorageSaveKey = "kimbatt-js13k-2021";
-let currentLevelIdx = (+localStorage.getItem(localStorageSaveKey) ?? 0) % (levelData.length - 1);
+let currentLevelIdx = (+window.localStorage.getItem(localStorageSaveKey) ?? 0) % (levelData.length - 1);
 
 for (let i = 1; i < levelData.length; ++i)
 {
@@ -125,13 +125,13 @@ function LoadLevel(idx)
     function CreatePlanetLocal(data, isCheckpoint)
     {
         let planet = new CSS3dPlanet(data[2], data[3] ?? 80,
-            isCheckpoint ? 0 : planetColorRng() * 100,
+            planetColorRng() * 100,
             isCheckpoint ? checkpointColor : [RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv(), RandomPlanetColorHsv()],
-            isCheckpoint ? 0.001 : planetColorRng() * 0.6 + 0.6,
+            planetColorRng() * 0.6 + 0.6,
             isCheckpoint,
             idx
         );
-        (planet.checkpointReached = isCheckpoint && idx <= currentLevelIdx) && (planet.element.style.filter = "hue-rotate(-88deg)");
+        (planet.checkpointReached = isCheckpoint && idx <= currentLevelIdx) && (planet.element.style.filter = "hue-rotate(88deg)");
 
         planet.position.x = data[0];
         planet.position.y = data[1];
@@ -245,8 +245,8 @@ function Reset()
 {
     circle.element.style.opacity = 1;
 
-    circle.position.x = currentCheckpoint.position.x;
-    circle.position.y = currentCheckpoint.position.y - currentCheckpoint.radius - 0.05;
+    circle.position.x = currentCheckpoint.position.x - currentCheckpoint.radius - 0.05;
+    circle.position.y = currentCheckpoint.position.y;
 
     circle.scale = 1;
 
@@ -263,6 +263,7 @@ function Reset()
 
     checkpointApproachT = 1;
     state = SPAWNING;
+    cameraStyle = 0;
 
     remainingBoost = totalBoost;
     UpdateRemainingBoost(0);
@@ -358,7 +359,7 @@ function Frame(time)
 
     {
         const arrowRadius = 0.45 / zoom;
-        const aspect = innerWidth / innerHeight;
+        const aspect = window.innerWidth / window.innerHeight;
 
         const wx = arrowRadius * aspect;
         const wy = arrowRadius;
@@ -419,7 +420,7 @@ function Explode()
 }
 
 let paused = true;
-
+let cameraStyle = 0; // 0 - spawning, 1 - alive
 function PhysicsStep()
 {
     particleSystem.update(fixedDelta);
@@ -443,11 +444,16 @@ function PhysicsStep()
 
         let tx = Clamp(Math.abs(cpx - circle.position.x), 0, maxDistance) / maxDistance;
         let ty = Clamp(Math.abs(cpy - circle.position.y), 0, maxDistance) / maxDistance;
-        cpx = Lerp(cpx, circle.position.x, falloff.easeInPoly(tx, 1.5));
-        cpy = Lerp(cpy, circle.position.y, falloff.easeInPoly(ty, 1.5));
+        cpx = Lerp(cpx, circle.position.x, Lerp(falloff.easeInPoly(tx, 1.5), tx, cameraStyle));
+        cpy = Lerp(cpy, circle.position.y, Lerp(falloff.easeInPoly(ty, 1.5), ty, cameraStyle));
 
-        camera.position.x = cpx;
-        camera.position.y = cpy;
+        let posXspawning = cpx;
+        let posYspawning = cpy;
+        let posXalive = circle.position.x * 2 - cpx;
+        let posYalive = circle.position.y * 2 - cpy;
+
+        camera.position.x = Lerp(posXspawning, posXalive, falloff.smoothstep(cameraStyle));
+        camera.position.y = Lerp(posYspawning, posYalive, falloff.smoothstep(cameraStyle));
 
         let j = 1 + Smoothstep(10, 25, Math.hypot(velocityX, velocityY)) * 0.5;
         zoom = Lerp(zoom, 1 / j, fixedDelta * 0.5);
@@ -491,7 +497,7 @@ function PhysicsStep()
                     state = SPAWNING;
                     velocityX = velocityY = 0;
                     LoadLevel(++currentLevelIdx + 1);
-                    localStorage.setItem(localStorageSaveKey, currentLevelIdx);
+                    window.localStorage.setItem(localStorageSaveKey, currentLevelIdx);
                     PlayCheckpointSound();
                     boostActive = false;
                     totalBoost = levelData[currentLevelIdx].boost;
@@ -500,11 +506,17 @@ function PhysicsStep()
                     UpdateRemainingBoost(0);
                     currentCheckpoint = planet;
                     planet.checkpointReached = true;
-                    planet.element.style.filter = "hue-rotate(-88deg)";
+                    planet.element.style.filter = "hue-rotate(88deg)";
                     checkpointApproachT = 0;
                     checkpointApproachStartX = circle.position.x;
                     checkpointApproachStartY = circle.position.y;
                     checkpointApproachStartAngle = facingAngle;
+
+                    const cameraTransitionTime = 2;
+                    SetFixedTick(() =>
+                    {
+                        cameraStyle = Clamp(cameraStyle - fixedDelta / cameraTransitionTime, 0, 1);
+                    }, cameraTransitionTime);
 
                     if (currentLevelIdx === levelData.length - 1)
                     {
@@ -516,8 +528,10 @@ function PhysicsStep()
                             overlay.classList.add("visible");
                         }, 0.5);
 
-                        globalVolumeNode.gain.linearRampToValueAtTime(globalVolume, actx.currentTime);
+                        globalVolumeNode.gain.linearRampToValueAtTime(originalGlobalVolume, actx.currentTime);
                         globalVolumeNode.gain.linearRampToValueAtTime(0, actx.currentTime + 4);
+                        originalGlobalVolume = 0;
+                        globalVolume = 0;
                     }
 
                     return;
@@ -650,6 +664,12 @@ function PhysicsStep()
             state = ALIVE;
             velocityX = Math.cos(targetAngle) * 15;
             velocityY = Math.sin(targetAngle) * 15;
+
+            const cameraTransitionTime = 3;
+            SetFixedTick(() =>
+            {
+                cameraStyle = Clamp(cameraStyle + fixedDelta / cameraTransitionTime, 0, 1);
+            }, cameraTransitionTime);
         }
     }
 

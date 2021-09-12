@@ -122,7 +122,7 @@ class CSS3dPlanet extends CSS3dObject
             pulse.classList.add("pulse");
             this.element.appendChild(pulse);
             pulse.style.borderRadius = "50%";
-            pulse.style.background = "cyan";
+            pulse.style.background = "#0f0";
             this.styleUpdaterFunctions.push(() =>
             {
                 pulse.style.width =  (2 * radius * WindowSize()) + "px";

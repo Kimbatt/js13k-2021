@@ -1,4 +1,9 @@
 
+function WindowSize()
+{
+    return window.innerHeight;
+}
+
 var webglNoiseFunction = `
 vec3 hash3(vec3 p)
 {
